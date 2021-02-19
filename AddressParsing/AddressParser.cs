@@ -36,7 +36,7 @@ namespace AddressParsing
         internal static char[] SplitterChars { get; } = new char[]
         {
             '~','!','@','#','$','%','^','&','*','(',')','-','+','_','=',':',';','\'','"','?','|','\\','{','}','[',']','<','>',',','.',' ',
-            '！','￥','…','（','）','—','【','】','、','：','；','“','’','《','》','？','　'
+            '！','￥','…','（','）','—','【','】','、','：','；','“','’','《','》','？','，','　'
         };
 
         /// <summary>
@@ -44,16 +44,15 @@ namespace AddressParsing
         /// </summary>
         internal static string[] RegionInvalidSuffix { get; } = new string[]
         {
-            "街", "路", "村", "弄", "幢",
-            "中心", "号", "寓", "苑", "墅",
-            "小区", "花园", "大道", "道", "农场",
-            "沟", "屯", "坡", "组", "庄",
-            "大厦", "工业", "产业", "广场", "科技",
+            "街", "路", "村", "弄", "幢", "号", "道",
+            "大厦", "工业", "产业", "广场", "科技", "公寓", "中心", "小区", "花园", "大道", "农场",
             "0","1","2","3","4","5","6","7","8","9",
             "０","１","２","３","４","５","６","７","８","９",
             "A","B","C","D","E","F","G","H","I","J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
             "a","b","c","d","e","f","g","h","i","j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ"
+            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ",
+
+            //"沟", "屯", "坡", "组", "庄", "苑", "墅", "寓",
         };
 
         static AddressParser()
@@ -402,25 +401,25 @@ namespace AddressParsing
                 {
                     substr = address.Substring(startindex, offset);
                 }
-
                 bool valid = !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
 
-                if (valid)
+                if (!valid)
                 {
-                    if (startindex - offset >= 0)
-                    {
-                        substr = address.Substring(startindex - offset, offset);
-                    }
-                    else
-                    {
-                        substr = address.Substring(0, startindex);
-                    }
-
-                    return !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
+                    return false;
                 }
+
+                if (startindex - offset >= 0)
+                {
+                    substr = address.Substring(startindex - offset, offset);
+                }
+                else
+                {
+                    substr = address.Substring(0, startindex);
+                }
+                return !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
             }
 
-            return false;
+            return true;
         }
     }
 }

@@ -11673,6 +11673,26 @@
         "ParentID": "78"
     },
     {
+        "ID": "787.1",
+        "Level": 3,
+        "Name": "姑苏区",
+        "ZipCode": "",
+        "ShortNames": [
+            "姑苏"
+        ],
+        "ParentID": "78"
+    },
+    {
+        "ID": "787.2",
+        "Level": 3,
+        "Name": "工业园区",
+        "ZipCode": "",
+        "ShortNames": [
+            "工业园"
+        ],
+        "ParentID": "78"
+    },
+    {
         "ID": "788",
         "Level": 3,
         "Name": "崇川区",

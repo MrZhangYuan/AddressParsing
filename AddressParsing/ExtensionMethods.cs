@@ -56,13 +56,18 @@ namespace AddressParsing
         {
             if (!string.IsNullOrEmpty(sourcestr))
             {
-                char[] newchars = new char[sourcestr.Length];
+                char[] newchars = null;
 
                 int j = 0;
                 for (int i = 0; i < sourcestr.Length; i++)
                 {
                     if (!chars.Contains(sourcestr[i]))
                     {
+                        if (newchars == null)
+                        {
+                            newchars = new char[sourcestr.Length];
+                        }
+
                         newchars[j] = sourcestr[i];
                         j++;
                     }
