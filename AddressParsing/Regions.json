@@ -26123,6 +26123,16 @@
         "ParentID": "256"
     },
     {
+        "ID": "2230.1",
+        "Level": 3,
+        "Name": "观山湖区",
+        "ZipCode": "",
+        "ShortNames": [
+            "观山湖"
+        ],
+        "ParentID": "256"
+    },
+    {
         "ID": "2231",
         "Level": 3,
         "Name": "钟山区",
