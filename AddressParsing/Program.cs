@@ -47,10 +47,20 @@ namespace AddressParsing
             //foreach (var address in lines)
             //{
             //    var matchitems = AddressParser.ParsingAddress(address);
-            //    //if (matchitems.Count > 1)
+            //    if (matchitems.Count > 1)
+            //    {
+            //        Console.WriteLine("原始：" + address);
+            //        mutcount++;
+            //        foreach (var matchitem in matchitems)
+            //        {
+            //            Console.WriteLine(AddressParser.FinalCut(matchitem, address));
+            //        }
+            //        Console.WriteLine();
+            //    }
+
+            //    //if (matchitems.Count == 1)
             //    //{
             //    //    Console.WriteLine("原始：" + address);
-            //    //    mutcount++;
             //    //    foreach (var matchitem in matchitems)
             //    //    {
             //    //        Console.WriteLine(AddressParser.FinalCut(matchitem, address));
@@ -58,12 +68,12 @@ namespace AddressParsing
             //    //    Console.WriteLine();
             //    //}
 
-            //    if (matchitems.Count == 0)
-            //    {
-            //        Console.WriteLine("原始：" + address);
-            //        nocount++;
-            //        Console.WriteLine();
-            //    }
+            //    //if (matchitems.Count == 0)
+            //    //{
+            //    //    Console.WriteLine("原始：" + address);
+            //    //    nocount++;
+            //    //    Console.WriteLine();
+            //    //}
             //}
             //Console.WriteLine("完成");
             //Console.ReadKey();

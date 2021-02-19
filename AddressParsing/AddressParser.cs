@@ -203,25 +203,37 @@ namespace AddressParsing
                 }
             }
 
-            //最小索引靠前的优先
-            var minindex = matchresults.MinGroup(_p => _p.PathEndItem.MatchIndex);
-            if (minindex.Count > 0)
+            //最小索引靠前的优先，后半部分详细地址造成误配概率大
+            if (matchresults.Count > 1)
             {
-                matchresults = minindex;
+                var minindex = matchresults.MinGroup(_p => _p.PathEndItem.MatchIndex);
+                if (minindex.Count > 0)
+                {
+                    matchresults = minindex;
+                }
             }
+
 
             //命中字数多的优先
-            var strcount = matchresults.MaxGroup(_p => _p.PathEndItem.MatchName.Length);
-            if (strcount.Count > 0)
+            if (matchresults.Count > 1)
             {
-                matchresults = strcount;
+                var strcount = matchresults.MaxGroup(_p => _p.PathEndItem.MatchName.Length);
+                if (strcount.Count > 0)
+                {
+                    matchresults = strcount;
+                }
             }
 
-            //命中的等级越低的越优先
-            //var level = matchresults.MinGroup(_p => _p.PathEndItem.MatchRegion.Level);
-            //if (level.Count > 0)
+            //命中的等级越低的越优先？？？
+            //若二级区域和其它二级区域下的三级区域简称重名，那么一般指小等级
+            //西安某某某大厦
+            //if (matchresults.Count > 1)
             //{
-            //    matchresults = level;
+            //    var level = matchresults.MinGroup(_p => _p.PathEndItem.MatchRegion.Level);
+            //    if (level.Count > 0)
+            //    {
+            //        matchresults = level;
+            //    }
             //}
 
             return matchresults;
