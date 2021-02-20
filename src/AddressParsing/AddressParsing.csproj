@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <ApplicationIcon />
+    <StartupObject />
+    <Authors>Mr.Zhang</Authors>
+    <PackageProjectUrl>https://github.com/MrZhangYuan/AddressParsing</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MrZhangYuan/AddressParsing.git</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <PackageTags>C#;.NET;AddressParser</PackageTags>
+    <Description>C# 实现的一个简单的 地址归一化算法，将地址匹配到 省-市-区</Description>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Regions.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Regions.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+  </ItemGroup>
+
+</Project>

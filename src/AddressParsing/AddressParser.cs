@@ -288,7 +288,7 @@ namespace AddressParsing
                                 item.SourceItems
                                     .Select(_p => _p.MatchRegion)
                                     .All(_p => _p.PathContains(matchitem.MatchRegion)),
-                                "按倒序排列的Path依次添加时，存在的Result下的Region必须全部PathContains"
+                                "按序排列的Path依次添加时，存在的Result下的Region必须全部PathContains"
                             );
 
                             item.Weight++;

@@ -1,11 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using AddressParsing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace AddressParsing
+namespace Demo
 {
     class Program
     {
@@ -13,7 +13,7 @@ namespace AddressParsing
         {
             Console.BufferHeight = 30000;
 
-            //var lines = File.ReadAllLines("AddressTest3.txt").Where(_p => !string.IsNullOrEmpty(_p)).ToList();
+            //var lines = File.ReadAllLines("AddressTest.txt").Where(_p => !string.IsNullOrEmpty(_p)).ToList();
             //List<List<string>> results = new List<List<string>>(lines.Count * 3 + 300);
             //foreach (var address in lines)
             //{
@@ -97,5 +97,6 @@ namespace AddressParsing
                 Console.WriteLine();
             }
         }
+
     }
 }
