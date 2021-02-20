@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace AddressParsing
@@ -57,7 +59,8 @@ namespace AddressParsing
 
         static AddressParser()
         {
-            Regions = new ReadOnlyCollection<Region>(JsonConvert.DeserializeObject<List<Region>>(File.ReadAllText("Regions.json")));
+            var regions = ReadRegionsFile();
+            Regions = new ReadOnlyCollection<Region>(JsonConvert.DeserializeObject<List<Region>>(regions));
             RegionsByLevel = Regions.GroupBy(_p => _p.Level)
                                             .ToDictionary(
                                                 _p => _p.Key,
@@ -66,6 +69,20 @@ namespace AddressParsing
             SortedLevels = new ReadOnlyCollection<int>(RegionsByLevel.Keys.OrderBy(_p => _p).ToList());
             BuildRelation();
             BuildFullNames();
+        }
+
+        private static string ReadRegionsFile()
+        {
+            using (Stream sm = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{Assembly.GetExecutingAssembly().GetName().Name}.Regions.json"))
+            {
+                if (sm == null)
+                {
+                    return string.Empty;
+                }
+                byte[] bs = new byte[sm.Length];
+                sm.Read(bs, 0, (int)sm.Length);
+                return Encoding.Default.GetString(bs);
+            }
         }
 
         private static void BuildRelation()
@@ -129,7 +146,7 @@ namespace AddressParsing
                     }
                 }
 
-                return $"{matchresult.PathEndItem.MatchRegion.GetFullPathText()} # {address}";
+                return $"{matchresult.PathEndItem.MatchRegion.GetFullPathText()} - {address}";
             }
 
             return address;
