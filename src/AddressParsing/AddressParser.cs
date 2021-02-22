@@ -68,7 +68,7 @@ namespace AddressParsing
                                             );
             SortedLevels = new ReadOnlyCollection<int>(RegionsByLevel.Keys.OrderBy(_p => _p).ToList());
             BuildRelation();
-            BuildFullNames();
+            BuildPathNames();
         }
 
         private static string ReadRegionsFile()
@@ -114,11 +114,11 @@ namespace AddressParsing
             }
         }
 
-        private static void BuildFullNames()
+        private static void BuildPathNames()
         {
             foreach (var item in Regions.Where(_p => _p.Parent != null))
             {
-                item.FullNames = item.BuildFullNames()
+                item.PathNames = item.BuildPathNames()
                                                 .Except(item.ShortNames)
                                                 .Except(new string[1] { item.Name })
                                                 .OrderByDescending(_p => _p.Length)
@@ -168,7 +168,7 @@ namespace AddressParsing
 
             if (matchitems.Count > 0)
             {
-                MatchFullName(
+                MatchPathName(
                     matchitems.Where(_p => _p.MatchRegion.Parent != null)
                             .Select(_p => _p.MatchRegion),
                     ref address,
@@ -188,7 +188,7 @@ namespace AddressParsing
 
             var fullnamematch = matchitems
                                                 .Where(
-                                                    _p => _p.MatchType == MatchType.FullName
+                                                    _p => _p.MatchType == MatchType.PathName
                                                 )
                                                 .ToArray();
             if (fullnamematch.Length > 0)
@@ -307,7 +307,7 @@ namespace AddressParsing
         }
 
 
-        private static void MatchFullName(
+        private static void MatchPathName(
             IEnumerable<Region> regionscope,
             ref string address,
             out List<MatchRegionItem> fullnamematch)
@@ -315,19 +315,19 @@ namespace AddressParsing
             fullnamematch = new List<MatchRegionItem>();
             foreach (var regionitem in regionscope)
             {
-                if (regionitem.FullNames != null)
+                if (regionitem.PathNames != null)
                 {
-                    for (int i = 0; i < regionitem.FullNames.Length; i++)
+                    for (int i = 0; i < regionitem.PathNames.Length; i++)
                     {
-                        var index = address.IndexOf(regionitem.FullNames[i]);
+                        var index = address.IndexOf(regionitem.PathNames[i]);
                         if (index >= 0)
                         {
                             fullnamematch.Add(
                                 new MatchRegionItem(
                                     regionitem,
-                                    MatchType.FullName,
+                                    MatchType.PathName,
                                     index,
-                                    regionitem.FullNames[i]
+                                    regionitem.PathNames[i]
                                 ));
 
                             break;

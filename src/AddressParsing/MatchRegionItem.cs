@@ -6,9 +6,9 @@ namespace AddressParsing
     public enum MatchType
     {
         /// <summary>
-        /// 等级全称命中
+        /// 路径名称命中
         /// </summary>
-        FullName = 0,
+        PathName = 0,
         /// <summary>
         /// 全称命中
         /// </summary>

@@ -39,7 +39,7 @@ namespace AddressParsing
         /// <summary>
         /// 全称，如 上海市闵行区、上海闵行区、上海市闵行、上海闵行
         /// </summary>
-        public string[] FullNames
+        public string[] PathNames
         {
             get;
             internal set;
@@ -123,11 +123,11 @@ namespace AddressParsing
             }
         }
 
-        public IEnumerable<string> BuildFullNames()
+        public IEnumerable<string> BuildPathNames()
         {
             if (this.Parent != null)
             {
-                foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildFullNames()))
+                foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathNames()))
                 {
                     yield return item + this.Name;
 
