@@ -37,7 +37,8 @@ namespace AddressParsing
         /// </summary>
         internal static char[] SplitterChars { get; } = new char[]
         {
-            '~','!','@','#','$','%','^','&','*','(',')','-','+','_','=',':',';','\'','"','?','|','\\','{','}','[',']','<','>',',','.',' ',
+            '~','!','@','#','$','%','^','&','(',')','-','+','_','=',':',';','\'','"','?','|','\\','{','}','[',']','<','>',',','.',' ',
+            '*',
             '！','￥','…','（','）','—','【','】','、','：','；','“','’','《','》','？','，','　'
         };
 
@@ -81,7 +82,7 @@ namespace AddressParsing
                 }
                 byte[] bs = new byte[sm.Length];
                 sm.Read(bs, 0, (int)sm.Length);
-                return Encoding.Default.GetString(bs);
+                return Encoding.UTF8.GetString(bs);
             }
         }
 
@@ -94,7 +95,9 @@ namespace AddressParsing
                 {
                     foreach (var region in item.Value)
                     {
-                        region.Children = children.Where(_p => _p.ParentID == region.ID).ToList();
+                        region.Children = children
+                                                    .Where(_p => _p.ParentID == region.ID)
+                                                    .ToList();
                     }
                 }
 
@@ -119,10 +122,10 @@ namespace AddressParsing
             foreach (var item in Regions.Where(_p => _p.Parent != null))
             {
                 item.PathNames = item.BuildPathNames()
-                                                .Except(item.ShortNames)
-                                                .Except(new string[1] { item.Name })
-                                                .OrderByDescending(_p => _p.Length)
-                                                .ToArray();
+                                            .Except(item.ShortNames)
+                                            .Except(new string[1] { item.Name })
+                                            .OrderByDescending(_p => _p.Length)
+                                            .ToArray();
             }
         }
 
@@ -136,10 +139,10 @@ namespace AddressParsing
                 && matchresult.SourceItems != null)
             {
                 foreach (var matchitem in matchresult
-                                                                .SourceItems
-                                                                .OrderByDescending(_p => _p.MatchIndex))
+                                                            .SourceItems
+                                                            .OrderByDescending(_p => _p.MatchIndex))
                 {
-                    var newindex = address.IndexOf(matchitem.MatchName);
+                    var newindex = address.IndexOf(matchitem.MatchName, StringComparison.Ordinal);
                     if (newindex >= 0)
                     {
                         address = address.Remove(newindex, matchitem.MatchName.Length);
@@ -319,7 +322,7 @@ namespace AddressParsing
                 {
                     for (int i = 0; i < regionitem.PathNames.Length; i++)
                     {
-                        var index = address.IndexOf(regionitem.PathNames[i]);
+                        var index = address.IndexOf(regionitem.PathNames[i], StringComparison.Ordinal);
                         if (index >= 0)
                         {
                             fullnamematch.Add(
@@ -358,7 +361,7 @@ namespace AddressParsing
 
                 MatchRegionItem matchitem = null;
 
-                int index = address.IndexOf(currentregion.Name, startindex);
+                int index = address.IndexOf(currentregion.Name, startindex, StringComparison.Ordinal);
 
                 if (index >= 0)
                 {
@@ -378,7 +381,7 @@ namespace AddressParsing
                     {
                         for (int i = 0; i < currentregion.ShortNames.Length; i++)
                         {
-                            index = address.IndexOf(currentregion.ShortNames[i], startindex);
+                            index = address.IndexOf(currentregion.ShortNames[i], startindex, StringComparison.Ordinal);
 
                             if (index >= 0
                                 && IsMatchedNameValid(ref address, index + currentregion.ShortNames[i].Length))
