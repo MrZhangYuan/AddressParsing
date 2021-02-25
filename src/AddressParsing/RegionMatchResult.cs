@@ -25,7 +25,7 @@ namespace AddressParsing
         internal RegionMatchResult(MatchRegionItem pathenditem)
         {
             PathEndItem = pathenditem;
-            this.SourceItems = new List<MatchRegionItem>(5) { this.PathEndItem };
+            this.SourceItems = new List<MatchRegionItem>(3) { this.PathEndItem };
             Weight = 1;
         }
 

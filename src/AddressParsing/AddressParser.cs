@@ -166,13 +166,22 @@ namespace AddressParsing
 
             List<MatchRegionItem> matchitems = new List<MatchRegionItem>();
 
-            bool needstop = false;
-            MatchRoughly(
+            bool matchedbypath = false;
+            Match(
                 RegionsByLevel[AddressParser.SortedLevels[0]],
-                ref needstop,
+                ref matchedbypath,
                 ref address,
                 0,
                 matchitems);
+
+            if (matchedbypath
+                || matchitems.Count == 1)
+            {
+                return new List<RegionMatchResult>(1)
+                {
+                    new RegionMatchResult(matchitems[matchitems.Count - 1])
+                };
+            }
 
             return MergeAndSort(matchitems);
         }
@@ -183,37 +192,21 @@ namespace AddressParsing
         {
             var matchresults = new List<RegionMatchResult>();
 
-            var fullnamematch = matchitems
-                                                .Where(
-                                                    _p => _p.MatchType == MatchType.PathName
-                                                )
-                                                .ToArray();
-            if (fullnamematch.Length > 0)
+            var namematch = matchitems
+                                        .Where(_p => _p.MatchType == MatchType.Name)
+                                        .ToArray();
+            if (namematch.Length > 0)
             {
-                Merge(ref matchresults, fullnamematch);
+                Merge(ref matchresults, namematch);
             }
             else
             {
-                var namematch = matchitems
-                                                .Where(
-                                                    _p => _p.MatchType == MatchType.Name
-                                                )
-                                                .ToArray();
-                if (namematch.Length > 0)
+                var shortmatch = matchitems
+                                            .Where(_p => _p.MatchType == MatchType.ShortName)
+                                            .ToArray();
+                if (shortmatch.Length > 0)
                 {
-                    Merge(ref matchresults, namematch);
-                }
-                else
-                {
-                    var shortnamematch = matchitems
-                                                            .Where(
-                                                                _p => _p.MatchType == MatchType.ShortName
-                                                            )
-                                                            .ToArray();
-                    if (shortnamematch.Length > 0)
-                    {
-                        Merge(ref matchresults, shortnamematch);
-                    }
+                    Merge(ref matchresults, shortmatch);
                 }
             }
 
@@ -238,9 +231,7 @@ namespace AddressParsing
                 }
             }
 
-            //命中的等级越低的越优先？？？
-            //若二级区域和其它二级区域下的三级区域简称重名，那么一般指小等级
-            //西安某某某大厦
+            //命中的等级越低的越优先：同时命中西安，取西安市而非西安区
             if (matchresults.Count > 1)
             {
                 var level = matchresults.MinGroup(_p => _p.PathEndItem.MatchRegion.Level);
@@ -303,9 +294,9 @@ namespace AddressParsing
             return result;
         }
 
-        private static void MatchRoughly(
+        private static void Match(
           IList<Region> regionscope,
-          ref bool needstop,
+          ref bool matchedbypath,
           ref string address,
           int startindex,
           List<MatchRegionItem> matchitems)
@@ -320,7 +311,7 @@ namespace AddressParsing
 
             for (int k = 0; k < regionscope.Count; k++)
             {
-                if (needstop)
+                if (matchedbypath)
                 {
                     return;
                 }
@@ -330,8 +321,26 @@ namespace AddressParsing
                 MatchType? matchtype = null;
                 string matchname = string.Empty;
 
-                if (currentregion.ShortNames != null
-                        && currentregion.ShortNames.Length > 0)
+                {
+                    var matchindex = address.IndexOf(currentregion.Name[0], startindex);
+                    if (matchindex >= 0)
+                    {
+                        matchindex = address.IndexOf(
+                            currentregion.Name,
+                            startindex,
+                            StringComparison.Ordinal);
+
+                        if (matchindex >= 0)
+                        {
+                            index = matchindex;
+                            matchtype = MatchType.Name;
+                            matchname = currentregion.Name;
+                        }
+                    }
+                }
+
+                if (!matchtype.HasValue
+                    && currentregion.ShortNames != null)
                 {
                     for (int i = 0; i < currentregion.ShortNames.Length; i++)
                     {
@@ -342,49 +351,28 @@ namespace AddressParsing
                                 currentregion.ShortNames[i],
                                 startindex,
                                 StringComparison.Ordinal);
-                        }
 
-                        if (matchindex >= 0
-                            && IsMatchedNameValid(ref address, matchindex + currentregion.ShortNames[i].Length))
-                        {
-                            index = matchindex;
-                            matchtype = MatchType.ShortName;
-                            matchname = currentregion.ShortNames[i];
-                            break;
-                        }
-                    }
-                }
-
-                if (matchtype != null)
-                {
-                    var matchindex = address.IndexOf(currentregion.Name[0], startindex);
-                    if (matchindex >= 0)
-                    {
-                        matchindex = address.IndexOf(
-                            currentregion.Name,
-                            startindex,
-                            StringComparison.Ordinal);
-                    }
-
-                    if (matchindex >= 0)
-                    {
-                        index = matchindex;
-                        matchtype = MatchType.Name;
-                        matchname = currentregion.Name;
-                    }
-                }
-
-                if (matchtype != null)
-                {
-                    if (currentregion.PathNames != null)
-                    {
-                        for (int i = 0; i < currentregion.PathNames.Length; i++)
-                        {
-                            var matchindex = address.IndexOf(currentregion.PathNames[i][0]);
-                            if (matchindex >= 0)
+                            if (matchindex >= 0
+                                && IsMatchedNameValid(ref address, matchindex, currentregion.ShortNames[i].Length))
                             {
-                                matchindex = address.IndexOf(currentregion.PathNames[i], StringComparison.Ordinal);
+                                index = matchindex;
+                                matchtype = MatchType.ShortName;
+                                matchname = currentregion.ShortNames[i];
+                                break;
                             }
+                        }
+                    }
+                }
+
+                if (matchtype.HasValue
+                    && currentregion.PathNames != null)
+                {
+                    for (int i = 0; i < currentregion.PathNames.Length; i++)
+                    {
+                        var matchindex = address.IndexOf(currentregion.PathNames[i][0]);
+                        if (matchindex >= 0)
+                        {
+                            matchindex = address.IndexOf(currentregion.PathNames[i], StringComparison.Ordinal);
 
                             if (matchindex >= 0)
                             {
@@ -394,7 +382,7 @@ namespace AddressParsing
 
                                 if (currentregion.Level == SortedLevels[SortedLevels.Count - 1])
                                 {
-                                    needstop = true;
+                                    matchedbypath = true;
                                 }
                                 break;
                             }
@@ -402,7 +390,7 @@ namespace AddressParsing
                     }
                 }
 
-                if (matchtype != null)
+                if (matchtype.HasValue)
                 {
                     matchitems.Add(new MatchRegionItem(
                                     currentregion,
@@ -414,9 +402,9 @@ namespace AddressParsing
                     index += matchname.Length;
                 }
 
-                MatchRoughly(
+                Match(
                     currentregion.Children,
-                    ref needstop,
+                    ref matchedbypath,
                     ref address,
                     index,
                     matchitems);
@@ -427,7 +415,8 @@ namespace AddressParsing
 
         private static bool IsMatchedNameValid(
             ref string address,
-            int startindex)
+            int startindex,
+            int matchlength)
         {
             if (startindex >= 0
                 && startindex < address.Length)
@@ -437,13 +426,13 @@ namespace AddressParsing
 
                 //截取 shortname 往后和往前的 offset 个字符，若不包含非三级地址常用后缀前缀，则本次ShortName匹配成功
 
-                if (startindex + offset > address.Length)
+                if (startindex + matchlength + offset > address.Length)
                 {
                     substr = address.Substring(startindex);
                 }
                 else
                 {
-                    substr = address.Substring(startindex, offset);
+                    substr = address.Substring(startindex + matchlength, offset);
                 }
                 bool valid = !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
 

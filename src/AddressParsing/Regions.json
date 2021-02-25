@@ -4143,9 +4143,29 @@
         "ParentID": "2"
     },
     {
+        "ID": "34.1",
+        "Level": 3,
+        "Name": "宁河区",
+        "ZipCode": "",
+        "ShortNames": [
+            "宁河"
+        ],
+        "ParentID": "2"
+    },
+    {
         "ID": "35",
         "Level": 3,
         "Name": "静海县",
+        "ZipCode": "",
+        "ShortNames": [
+            "静海"
+        ],
+        "ParentID": "2"
+    },
+    {
+        "ID": "35.1",
+        "Level": 3,
+        "Name": "静海区",
         "ZipCode": "",
         "ShortNames": [
             "静海"
@@ -4159,6 +4179,26 @@
         "ZipCode": "",
         "ShortNames": [
             "蓟县"
+        ],
+        "ParentID": "2"
+    },
+    {
+        "ID": "36.2",
+        "Level": 3,
+        "Name": "蓟州区",
+        "ZipCode": "",
+        "ShortNames": [
+            "蓟州"
+        ],
+        "ParentID": "2"
+    },
+    {
+        "ID": "36.1",
+        "Level": 3,
+        "Name": "滨海新区",
+        "ZipCode": "",
+        "ShortNames": [
+            "滨海区"
         ],
         "ParentID": "2"
     },
@@ -24248,6 +24288,7 @@
         "Name": "武侯区",
         "ZipCode": "",
         "ShortNames": [
+            "高新区",
             "武侯"
         ],
         "ParentID": "235"
