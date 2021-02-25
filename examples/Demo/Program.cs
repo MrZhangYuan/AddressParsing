@@ -91,7 +91,7 @@ namespace Demo
                 foreach (var matchitem in matchitems)
                 {
                     Console.WriteLine(matchitem);
-                    Console.WriteLine(AddressParser.FinalCut(matchitem, address));
+                    Console.WriteLine("处理：" + AddressParser.FinalCut(matchitem, address));
                 }
                 Console.WriteLine();
             }

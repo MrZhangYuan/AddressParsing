@@ -14,6 +14,7 @@ namespace AddressParsing
 {
     public static class AddressParser
     {
+        private static List<Region> _sourceList = null;
         public static ReadOnlyCollection<Region> Regions
         {
             get;
@@ -38,7 +39,7 @@ namespace AddressParsing
         internal static char[] SplitterChars { get; } = new char[]
         {
             '~','!','@','#','$','%','^','&','(',')','-','+','_','=',':',';','\'','"','?','|','\\','{','}','[',']','<','>',',','.',' ',
-            '*',
+            //'*',
             '！','￥','…','（','）','—','【','】','、','：','；','“','’','《','》','？','，','　'
         };
 
@@ -61,7 +62,9 @@ namespace AddressParsing
         static AddressParser()
         {
             var regions = ReadRegionsFile();
-            Regions = new ReadOnlyCollection<Region>(JsonConvert.DeserializeObject<List<Region>>(regions));
+
+            _sourceList = JsonConvert.DeserializeObject<List<Region>>(regions);
+            Regions = new ReadOnlyCollection<Region>(_sourceList);
             RegionsByLevel = Regions.GroupBy(_p => _p.Level)
                                             .ToDictionary(
                                                 _p => _p.Key,
@@ -163,22 +166,13 @@ namespace AddressParsing
 
             List<MatchRegionItem> matchitems = new List<MatchRegionItem>();
 
+            bool needstop = false;
             MatchRoughly(
-                RegionsByLevel[AddressParser.SortedLevels.Min()],
+                RegionsByLevel[AddressParser.SortedLevels[0]],
+                ref needstop,
                 ref address,
                 0,
                 matchitems);
-
-            if (matchitems.Count > 0)
-            {
-                MatchPathName(
-                    matchitems.Where(_p => _p.MatchRegion.Parent != null)
-                            .Select(_p => _p.MatchRegion),
-                    ref address,
-                    out List<MatchRegionItem> fullnamematch);
-
-                matchitems.InsertRange(0, fullnamematch);
-            }
 
             return MergeAndSort(matchitems);
         }
@@ -247,14 +241,14 @@ namespace AddressParsing
             //命中的等级越低的越优先？？？
             //若二级区域和其它二级区域下的三级区域简称重名，那么一般指小等级
             //西安某某某大厦
-            //if (matchresults.Count > 1)
-            //{
-            //    var level = matchresults.MinGroup(_p => _p.PathEndItem.MatchRegion.Level);
-            //    if (level.Count > 0)
-            //    {
-            //        matchresults = level;
-            //    }
-            //}
+            if (matchresults.Count > 1)
+            {
+                var level = matchresults.MinGroup(_p => _p.PathEndItem.MatchRegion.Level);
+                if (level.Count > 0)
+                {
+                    matchresults = level;
+                }
+            }
 
             return matchresults;
         }
@@ -309,50 +303,12 @@ namespace AddressParsing
             return result;
         }
 
-
-        private static void MatchPathName(
-            IEnumerable<Region> regionscope,
-            ref string address,
-            out List<MatchRegionItem> fullnamematch)
-        {
-            fullnamematch = new List<MatchRegionItem>();
-            foreach (var regionitem in regionscope)
-            {
-                if (regionitem.PathNames != null)
-                {
-                    for (int i = 0; i < regionitem.PathNames.Length; i++)
-                    {
-                        //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
-                        //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
-                        var index = address.IndexOf(regionitem.PathNames[i][0]);
-                        if (index >= 0)
-                        {
-                            index = address.IndexOf(regionitem.PathNames[i], StringComparison.Ordinal);
-                        }
-
-                        if (index >= 0)
-                        {
-                            fullnamematch.Add(
-                                new MatchRegionItem(
-                                    regionitem,
-                                    MatchType.PathName,
-                                    index,
-                                    regionitem.PathNames[i]
-                                ));
-
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-
         private static void MatchRoughly(
-            IList<Region> regionscope,
-            ref string address,
-            int startindex,
-            List<MatchRegionItem> matchitems)
+          IList<Region> regionscope,
+          ref bool needstop,
+          ref string address,
+          int startindex,
+          List<MatchRegionItem> matchitems)
         {
             if (regionscope == null
                 || startindex >= address.Length)
@@ -364,72 +320,109 @@ namespace AddressParsing
 
             for (int k = 0; k < regionscope.Count; k++)
             {
+                if (needstop)
+                {
+                    return;
+                }
+
                 var currentregion = regionscope[k];
+                int index = -1;
+                MatchType? matchtype = null;
+                string matchname = string.Empty;
 
-                MatchRegionItem matchitem = null;
-
-                //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
-                //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
-                int index = address.IndexOf(currentregion.Name[0], startindex);
-                if (index >= 0)
-                {
-                    index = address.IndexOf(currentregion.Name, startindex, StringComparison.Ordinal);
-                }
-
-                if (index >= 0)
-                {
-                    matchitem = new MatchRegionItem(
-                        currentregion,
-                        MatchType.Name,
-                        index,
-                        currentregion.Name);
-
-                    index = index + currentregion.Name.Length;
-                }
-
-                if (matchitem == null)
-                {
-                    if (currentregion.ShortNames != null
+                if (currentregion.ShortNames != null
                         && currentregion.ShortNames.Length > 0)
+                {
+                    for (int i = 0; i < currentregion.ShortNames.Length; i++)
                     {
-                        for (int i = 0; i < currentregion.ShortNames.Length; i++)
+                        var matchindex = address.IndexOf(currentregion.ShortNames[i][0], startindex);
+                        if (matchindex >= 0)
                         {
-                            //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
-                            //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
-                            index = address.IndexOf(currentregion.ShortNames[i][0], startindex);
-                            if (index >= 0)
+                            matchindex = address.IndexOf(
+                                currentregion.ShortNames[i],
+                                startindex,
+                                StringComparison.Ordinal);
+                        }
+
+                        if (matchindex >= 0
+                            && IsMatchedNameValid(ref address, matchindex + currentregion.ShortNames[i].Length))
+                        {
+                            index = matchindex;
+                            matchtype = MatchType.ShortName;
+                            matchname = currentregion.ShortNames[i];
+                            break;
+                        }
+                    }
+                }
+
+                if (matchtype != null)
+                {
+                    var matchindex = address.IndexOf(currentregion.Name[0], startindex);
+                    if (matchindex >= 0)
+                    {
+                        matchindex = address.IndexOf(
+                            currentregion.Name,
+                            startindex,
+                            StringComparison.Ordinal);
+                    }
+
+                    if (matchindex >= 0)
+                    {
+                        index = matchindex;
+                        matchtype = MatchType.Name;
+                        matchname = currentregion.Name;
+                    }
+                }
+
+                if (matchtype != null)
+                {
+                    if (currentregion.PathNames != null)
+                    {
+                        for (int i = 0; i < currentregion.PathNames.Length; i++)
+                        {
+                            var matchindex = address.IndexOf(currentregion.PathNames[i][0]);
+                            if (matchindex >= 0)
                             {
-                                index = address.IndexOf(currentregion.ShortNames[i], startindex, StringComparison.Ordinal);
+                                matchindex = address.IndexOf(currentregion.PathNames[i], StringComparison.Ordinal);
                             }
 
-                            if (index >= 0
-                                && IsMatchedNameValid(ref address, index + currentregion.ShortNames[i].Length))
+                            if (matchindex >= 0)
                             {
-                                matchitem = new MatchRegionItem(
-                                    currentregion,
-                                    MatchType.ShortName,
-                                    index,
-                                    currentregion.ShortNames[i]);
+                                index = matchindex;
+                                matchtype = MatchType.PathName;
+                                matchname = currentregion.PathNames[i];
 
-                                index = index + currentregion.ShortNames[i].Length;
+                                if (currentregion.Level == SortedLevels[SortedLevels.Count - 1])
+                                {
+                                    needstop = true;
+                                }
                                 break;
                             }
                         }
                     }
                 }
 
-                if (matchitem != null)
+                if (matchtype != null)
                 {
-                    matchitems.Add(matchitem);
+                    matchitems.Add(new MatchRegionItem(
+                                    currentregion,
+                                    matchtype.Value,
+                                    index,
+                                    matchname
+                                ));
+
+                    index += matchname.Length;
                 }
 
                 MatchRoughly(
                     currentregion.Children,
+                    ref needstop,
                     ref address,
                     index,
                     matchitems);
             }
         }
+
 
 
         private static bool IsMatchedNameValid(

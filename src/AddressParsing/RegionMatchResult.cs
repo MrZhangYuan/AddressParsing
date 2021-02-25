@@ -31,7 +31,7 @@ namespace AddressParsing
 
         public override string ToString()
         {
-            return $"Weight:{Weight}{Environment.NewLine}MatchedRegions:{string.Join(Environment.NewLine, SourceItems)}";
+            return $"Weight:{Weight}{Environment.NewLine}MatchedRegions:{PathEndItem}";
         }
     }
 }
