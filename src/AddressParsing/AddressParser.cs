@@ -322,7 +322,14 @@ namespace AddressParsing
                 {
                     for (int i = 0; i < regionitem.PathNames.Length; i++)
                     {
-                        var index = address.IndexOf(regionitem.PathNames[i], StringComparison.Ordinal);
+                        //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
+                        //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
+                        var index = address.IndexOf(regionitem.PathNames[i][0]);
+                        if (index >= 0)
+                        {
+                            index = address.IndexOf(regionitem.PathNames[i], StringComparison.Ordinal);
+                        }
+
                         if (index >= 0)
                         {
                             fullnamematch.Add(
@@ -361,7 +368,13 @@ namespace AddressParsing
 
                 MatchRegionItem matchitem = null;
 
-                int index = address.IndexOf(currentregion.Name, startindex, StringComparison.Ordinal);
+                //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
+                //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
+                int index = address.IndexOf(currentregion.Name[0], startindex);
+                if (index >= 0)
+                {
+                    index = address.IndexOf(currentregion.Name, startindex, StringComparison.Ordinal);
+                }
 
                 if (index >= 0)
                 {
@@ -381,7 +394,13 @@ namespace AddressParsing
                     {
                         for (int i = 0; i < currentregion.ShortNames.Length; i++)
                         {
-                            index = address.IndexOf(currentregion.ShortNames[i], startindex, StringComparison.Ordinal);
+                            //先判断首字符是否包含，再判断整串包含，虽然在命中的情况下会耗费一次匹配，但多数是不命中的
+                            //性能提升：单次地址匹配（7000次代码字符匹配）从0.0004秒提升至0.0003秒
+                            index = address.IndexOf(currentregion.ShortNames[i][0], startindex);
+                            if (index >= 0)
+                            {
+                                index = address.IndexOf(currentregion.ShortNames[i], startindex, StringComparison.Ordinal);
+                            }
 
                             if (index >= 0
                                 && IsMatchedNameValid(ref address, index + currentregion.ShortNames[i].Length))
