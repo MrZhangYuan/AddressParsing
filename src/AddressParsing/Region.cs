@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace AddressParsing
@@ -23,6 +24,7 @@ namespace AddressParsing
         {
             get;
         }
+
         public string ZipCode
         {
             get;
@@ -31,7 +33,7 @@ namespace AddressParsing
         /// <summary>
         /// 按照识别度（如：字符串长度）倒序排列的简称
         /// </summary>
-        public string[] ShortNames
+        internal string[] ShortNames
         {
             get;
         }
@@ -39,10 +41,10 @@ namespace AddressParsing
         /// <summary>
         /// 全称，如 上海市闵行区、上海闵行区、上海市闵行、上海闵行
         /// </summary>
-        public string[] PathNames
+        internal string[] PathNames
         {
             get;
-            internal set;
+            set;
         }
 
         public string ParentID
@@ -75,10 +77,17 @@ namespace AddressParsing
         }
 
         [JsonIgnore]
-        public List<Region> Children
+        public ReadOnlyCollection<Region> Children
         {
             get;
             internal set;
+        }
+
+        [JsonIgnore]
+        internal string[] ChildrenShortestNames
+        {
+            get;
+            set;
         }
 
         public string GetFullPathText()

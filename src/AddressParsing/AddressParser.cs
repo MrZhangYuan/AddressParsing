@@ -15,19 +15,23 @@ namespace AddressParsing
     public static class AddressParser
     {
         private static List<Region> _sourceList = null;
+        private static Dictionary<int, ReadOnlyCollection<Region>> _regionsByLevel = null;
+        private static string[] _rootLevelShortestShortName = null;
+        private static int[] _sortedLevels = null;
+
+        /// <summary>
+        /// 所有的区划
+        /// </summary>
         public static ReadOnlyCollection<Region> Regions
         {
             get;
             private set;
         }
 
-        public static ReadOnlyCollection<int> SortedLevels
-        {
-            get;
-            private set;
-        }
-
-        public static Dictionary<int, ReadOnlyCollection<Region>> RegionsByLevel
+        /// <summary>
+        /// 按区划等级分组的字典
+        /// </summary>
+        public static ReadOnlyDictionary<int, ReadOnlyCollection<Region>> RegionsByLevel
         {
             get;
             private set;
@@ -36,7 +40,7 @@ namespace AddressParsing
         /// <summary>
         /// 地址常用分割符，用来首次处理地址时移除
         /// </summary>
-        internal static char[] SplitterChars { get; } = new char[]
+        private static char[] SplitterChars { get; } = new char[]
         {
             '~','!','@','#','$','%','^','&','(',')','-','+','_','=',':',';','\'','"','?','|','\\','{','}','[',']','<','>',',','.',' ',
             //'*',
@@ -46,7 +50,7 @@ namespace AddressParsing
         /// <summary>
         /// 非三级地区常用后缀和前缀
         /// </summary>
-        internal static string[] RegionInvalidSuffix { get; } = new string[]
+        private static string[] RegionInvalidSuffix { get; } = new string[]
         {
             "街", "路", "村", "弄", "幢", "号", "道",
             "大厦", "工业", "产业", "广场", "科技", "公寓", "中心", "小区", "花园", "大道", "农场",
@@ -54,23 +58,24 @@ namespace AddressParsing
             "０","１","２","３","４","５","６","７","８","９",
             "A","B","C","D","E","F","G","H","I","J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
             "a","b","c","d","e","f","g","h","i","j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ",
-
-            //"沟", "屯", "坡", "组", "庄", "苑", "墅", "寓",
+            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ"
         };
 
         static AddressParser()
         {
             var regions = ReadRegionsFile();
-
             _sourceList = JsonConvert.DeserializeObject<List<Region>>(regions);
             Regions = new ReadOnlyCollection<Region>(_sourceList);
-            RegionsByLevel = Regions.GroupBy(_p => _p.Level)
-                                            .ToDictionary(
-                                                _p => _p.Key,
-                                                _p => new ReadOnlyCollection<Region>(_p.ToList())
-                                            );
-            SortedLevels = new ReadOnlyCollection<int>(RegionsByLevel.Keys.OrderBy(_p => _p).ToList());
+            _regionsByLevel = Regions.GroupBy(_p => _p.Level)
+                                    .ToDictionary(
+                                        _p => _p.Key,
+                                        _p => new ReadOnlyCollection<Region>(_p.ToList())
+                                    );
+            RegionsByLevel = new ReadOnlyDictionary<int, ReadOnlyCollection<Region>>(_regionsByLevel);
+            _sortedLevels = RegionsByLevel.Keys.OrderBy(_p => _p).ToArray();
+            _rootLevelShortestShortName = RegionsByLevel[_sortedLevels[0]]
+                                        .Select(_p => _p.ShortNames[_p.ShortNames.Length - 1])
+                                        .ToArray();
             BuildRelation();
             BuildPathNames();
         }
@@ -98,9 +103,20 @@ namespace AddressParsing
                 {
                     foreach (var region in item.Value)
                     {
-                        region.Children = children
-                                                    .Where(_p => _p.ParentID == region.ID)
-                                                    .ToList();
+                        var currentchildren = children
+                                            .Where(_p => _p.ParentID == region.ID)
+                                            .ToList();
+                        region.Children = new ReadOnlyCollection<Region>(currentchildren);
+
+                        region.ChildrenShortestNames = currentchildren
+                                                    .Where(
+                                                        _p => _p.ShortNames != null
+                                                                && _p.ShortNames.Length > 0
+                                                    )
+                                                    .Select(
+                                                        _p => _p.ShortNames[_p.ShortNames.Length - 1]
+                                                    )
+                                                    .ToArray();
                     }
                 }
 
@@ -125,13 +141,29 @@ namespace AddressParsing
             foreach (var item in Regions.Where(_p => _p.Parent != null))
             {
                 item.PathNames = item.BuildPathNames()
-                                            .Except(item.ShortNames)
-                                            .Except(new string[1] { item.Name })
-                                            .OrderByDescending(_p => _p.Length)
-                                            .ToArray();
+                                .Except(item.ShortNames)
+                                .Except(new string[1] { item.Name })
+                                .OrderByDescending(_p => _p.Length)
+                                .ToArray();
             }
         }
 
+        public static void MakePrioritySort(Func<Region, int> selector)
+        {
+            if (selector != null)
+            {
+                var rootlevel = AddressParser._sortedLevels[0];
+                var roots = RegionsByLevel[rootlevel]
+                            .OrderBy(selector)
+                            .ToList();
+
+                _regionsByLevel[rootlevel] = new ReadOnlyCollection<Region>(roots);
+
+                _rootLevelShortestShortName = RegionsByLevel[rootlevel]
+                                            .Select(_p => _p.ShortNames[_p.ShortNames.Length - 1])
+                                            .ToArray();
+            }
+        }
 
         public static string FinalCut(
             RegionMatchResult matchresult,
@@ -142,8 +174,8 @@ namespace AddressParsing
                 && matchresult.SourceItems != null)
             {
                 foreach (var matchitem in matchresult
-                                                            .SourceItems
-                                                            .OrderByDescending(_p => _p.MatchIndex))
+                                        .SourceItems
+                                        .OrderByDescending(_p => _p.MatchIndex))
                 {
                     var newindex = address.IndexOf(matchitem.MatchName, StringComparison.Ordinal);
                     if (newindex >= 0)
@@ -164,11 +196,18 @@ namespace AddressParsing
         {
             ExtensionMethods.RemoveChars(ref address, SplitterChars);
 
+            if (string.IsNullOrEmpty(address)
+                || address.Length < 2)
+            {
+                return new List<RegionMatchResult>(0);
+            }
+
             List<MatchRegionItem> matchitems = new List<MatchRegionItem>();
 
             bool matchedbypath = false;
             Match(
-                RegionsByLevel[AddressParser.SortedLevels[0]],
+                RegionsByLevel[AddressParser._sortedLevels[0]],
+                QuickSort(ref address, 0, _rootLevelShortestShortName),
                 ref matchedbypath,
                 ref address,
                 0,
@@ -193,8 +232,8 @@ namespace AddressParsing
             var matchresults = new List<RegionMatchResult>();
 
             var namematch = matchitems
-                                        .Where(_p => _p.MatchType == MatchType.Name)
-                                        .ToArray();
+                            .Where(_p => _p.MatchType == MatchType.Name)
+                            .ToArray();
             if (namematch.Length > 0)
             {
                 Merge(ref matchresults, namematch);
@@ -202,8 +241,8 @@ namespace AddressParsing
             else
             {
                 var shortmatch = matchitems
-                                            .Where(_p => _p.MatchType == MatchType.ShortName)
-                                            .ToArray();
+                                .Where(_p => _p.MatchType == MatchType.ShortName)
+                                .ToArray();
                 if (shortmatch.Length > 0)
                 {
                     Merge(ref matchresults, shortmatch);
@@ -249,11 +288,12 @@ namespace AddressParsing
             ref List<RegionMatchResult> matchresults,
             IEnumerable<MatchRegionItem> matchitemscope)
         {
-            var fulllevelgroup = matchitemscope.GroupBy(_p => _p.MatchRegion.Level)
-                                                    .ToDictionary(
-                                                        _p => _p.Key,
-                                                        _p => _p.ToList()
-                                                    );
+            var fulllevelgroup = matchitemscope
+                                .GroupBy(_p => _p.MatchRegion.Level)
+                                .ToDictionary(
+                                    _p => _p.Key,
+                                    _p => _p.ToList()
+                                );
 
             bool result = false;
 
@@ -261,7 +301,6 @@ namespace AddressParsing
             {
                 foreach (var matchitem in fulllevelgroup[key])
                 {
-                    //TODO 全称也分：全称组合、短称组合、全短称组合
                     var exists = matchresults.Where(_p => _p.PathEndItem.MatchRegion.PathContains(matchitem.MatchRegion));
                     if (!exists.Any())
                     {
@@ -294,12 +333,51 @@ namespace AddressParsing
             return result;
         }
 
+
+        private static int QuickSort(ref string address, int startindex, string[] shortnames)
+        {
+            if (shortnames == null
+                || shortnames.Length == 0)
+            {
+                return 0;
+            }
+
+            startindex = startindex >= 0 && startindex < address.Length ? startindex : 0;
+
+            int length = address.Length >= 3 ? 3 : 2;
+
+            for (int i = 0; i < shortnames.Length; i++)
+            {
+                var matchindex = address.IndexOf(
+                    shortnames[i][0],
+                    startindex,
+                    length);
+
+                if (matchindex >= 0)
+                {
+                    matchindex = address.IndexOf(
+                        shortnames[i],
+                        startindex,
+                        length,
+                        StringComparison.Ordinal);
+
+                    if (matchindex >= 0)
+                    {
+                        return i;
+                    }
+                }
+            }
+            return 0;
+        }
+
+
         private static void Match(
-          IList<Region> regionscope,
-          ref bool matchedbypath,
-          ref string address,
-          int startindex,
-          List<MatchRegionItem> matchitems)
+              IList<Region> regionscope,
+              int loopstartindex,
+              ref bool matchedbypath,
+              ref string address,
+              int startindex,
+              List<MatchRegionItem> matchitems)
         {
             if (regionscope == null
                 || startindex >= address.Length)
@@ -308,25 +386,33 @@ namespace AddressParsing
             }
 
             startindex = startindex >= 0 ? startindex : 0;
+            int loopcount = regionscope.Count;
+            bool handled = false;
 
-            for (int k = 0; k < regionscope.Count; k++)
+            for (int k = loopstartindex; k < loopcount; k++)
             {
                 if (matchedbypath)
                 {
                     return;
                 }
 
-                var currentregion = regionscope[k];
+                if (handled
+                    && k == loopstartindex)
+                {
+                    continue;
+                }
+
+                var current = regionscope[k];
                 int index = -1;
                 MatchType? matchtype = null;
                 string matchname = string.Empty;
 
                 {
-                    var matchindex = address.IndexOf(currentregion.Name[0], startindex);
+                    var matchindex = address.IndexOf(current.Name[0], startindex);
                     if (matchindex >= 0)
                     {
                         matchindex = address.IndexOf(
-                            currentregion.Name,
+                            current.Name,
                             startindex,
                             StringComparison.Ordinal);
 
@@ -334,30 +420,30 @@ namespace AddressParsing
                         {
                             index = matchindex;
                             matchtype = MatchType.Name;
-                            matchname = currentregion.Name;
+                            matchname = current.Name;
                         }
                     }
                 }
 
                 if (!matchtype.HasValue
-                    && currentregion.ShortNames != null)
+                    && current.ShortNames != null)
                 {
-                    for (int i = 0; i < currentregion.ShortNames.Length; i++)
+                    for (int i = 0; i < current.ShortNames.Length; i++)
                     {
-                        var matchindex = address.IndexOf(currentregion.ShortNames[i][0], startindex);
+                        var matchindex = address.IndexOf(current.ShortNames[i][0], startindex);
                         if (matchindex >= 0)
                         {
                             matchindex = address.IndexOf(
-                                currentregion.ShortNames[i],
+                                current.ShortNames[i],
                                 startindex,
                                 StringComparison.Ordinal);
 
                             if (matchindex >= 0
-                                && IsMatchedNameValid(ref address, matchindex, currentregion.ShortNames[i].Length))
+                                && IsMatchedNameValid(ref address, matchindex, current.ShortNames[i].Length))
                             {
                                 index = matchindex;
                                 matchtype = MatchType.ShortName;
-                                matchname = currentregion.ShortNames[i];
+                                matchname = current.ShortNames[i];
                                 break;
                             }
                         }
@@ -365,22 +451,22 @@ namespace AddressParsing
                 }
 
                 if (matchtype.HasValue
-                    && currentregion.PathNames != null)
+                    && current.PathNames != null)
                 {
-                    for (int i = 0; i < currentregion.PathNames.Length; i++)
+                    for (int i = 0; i < current.PathNames.Length; i++)
                     {
-                        var matchindex = address.IndexOf(currentregion.PathNames[i][0]);
+                        var matchindex = address.IndexOf(current.PathNames[i][0]);
                         if (matchindex >= 0)
                         {
-                            matchindex = address.IndexOf(currentregion.PathNames[i], StringComparison.Ordinal);
+                            matchindex = address.IndexOf(current.PathNames[i], StringComparison.Ordinal);
 
                             if (matchindex >= 0)
                             {
                                 index = matchindex;
                                 matchtype = MatchType.PathName;
-                                matchname = currentregion.PathNames[i];
+                                matchname = current.PathNames[i];
 
-                                if (currentregion.Level == SortedLevels[SortedLevels.Count - 1])
+                                if (current.Level == _sortedLevels[_sortedLevels.Length - 1])
                                 {
                                     matchedbypath = true;
                                 }
@@ -393,7 +479,7 @@ namespace AddressParsing
                 if (matchtype.HasValue)
                 {
                     matchitems.Add(new MatchRegionItem(
-                                    currentregion,
+                                    current,
                                     matchtype.Value,
                                     index,
                                     matchname
@@ -403,11 +489,23 @@ namespace AddressParsing
                 }
 
                 Match(
-                    currentregion.Children,
+                    current.Children,
+                    index > 0
+                        && current.Level < _sortedLevels[_sortedLevels.Length - 1] ? QuickSort(ref address, index, current.ChildrenShortestNames) : 0,
                     ref matchedbypath,
                     ref address,
                     index,
                     matchitems);
+
+                //QuickSort确定最先处理的索引
+                //若索引不是从0开始的，确保处理完当前索引，再从0开始
+                if (!handled
+                    && loopstartindex > 0
+                    && k == loopstartindex)
+                {
+                    handled = true;
+                    k = -1;
+                }
             }
         }
 
