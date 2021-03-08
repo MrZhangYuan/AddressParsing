@@ -36,10 +36,6 @@ namespace AddressParsing
         private static int[] _sortedLevels = null;
 
 
-        private static Dictionary<string, Region[]> _regionShortestShortNameGroup = null;
-
-
-
         /// <summary>
         ///     所有的区划
         /// </summary>
@@ -109,14 +105,6 @@ namespace AddressParsing
             _rootLevelShortestShortName = RegionsByLevel[_sortedLevels[0]]
                                         .Select(_p => _p.ShortNames[_p.ShortNames.Length - 1])
                                         .ToArray();
-
-            _regionShortestShortNameGroup = _sourceList
-                                            .GroupBy(_p => _p.ShortNames[_p.ShortNames.Length - 1])
-                                            .ToDictionary(
-                                                _p => _p.Key,
-                                                _p => _p.OrderBy(_p1 => _p1.Level).ToArray()
-                                            );
-
 
             BuildRelation();
             BuildPathNames();
