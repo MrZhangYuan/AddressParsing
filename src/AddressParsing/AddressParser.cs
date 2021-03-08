@@ -483,7 +483,7 @@ namespace AddressParsing
 
             startindex = startindex >= 0 && startindex < address.Length ? startindex : 0;
 
-            int length = address.Length >= 3 ? 3 : 2;
+            int length = address.Length - startindex >= 3 ? 3 : 2;
 
             for (int i = 0; i < shortnames.Length; i++)
             {
