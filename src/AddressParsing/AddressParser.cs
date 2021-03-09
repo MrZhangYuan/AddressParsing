@@ -483,30 +483,35 @@ namespace AddressParsing
 
             startindex = startindex >= 0 && startindex < address.Length ? startindex : 0;
 
-            int length = address.Length - startindex >= 3 ? 3 : 2;
+            var lastlength = address.Length - startindex;
 
-            for (int i = 0; i < shortnames.Length; i++)
+            int length = lastlength >= 3 ? 3 : lastlength >= 2 ? 2 : 0;
+
+            if (length > 0)
             {
-                //  首先匹配第一个字符，在第一个字符存在的情况下再去匹配整个ShortName
-                //  这对单次的匹配到的情况下性能是不好的
-                //  但多数情况下是匹配不到的，所以在实测下有性能提升
-                //  算法中这种写法随处可见
-                var matchindex = address.IndexOf(
-                    shortnames[i][0],
-                    startindex,
-                    length);
-
-                if (matchindex >= 0)
+                for (int i = 0; i < shortnames.Length; i++)
                 {
-                    matchindex = address.IndexOf(
-                        shortnames[i],
+                    //  首先匹配第一个字符，在第一个字符存在的情况下再去匹配整个ShortName
+                    //  这对单次的匹配到的情况下性能是不好的
+                    //  但多数情况下是匹配不到的，所以在实测下有性能提升
+                    //  算法中这种写法随处可见
+                    var matchindex = address.IndexOf(
+                        shortnames[i][0],
                         startindex,
-                        length,
-                        StringComparison.Ordinal);
+                        length);
 
                     if (matchindex >= 0)
                     {
-                        return i;
+                        matchindex = address.IndexOf(
+                            shortnames[i],
+                            startindex,
+                            length,
+                            StringComparison.Ordinal);
+
+                        if (matchindex >= 0)
+                        {
+                            return i;
+                        }
                     }
                 }
             }
