@@ -5,33 +5,61 @@ using System.Linq;
 
 namespace AddressParsing
 {
+    /// <summary>
+    ///     区划
+    /// </summary>
     public class Region
     {
+        /// <summary>
+        ///     内部ID
+        /// </summary>
         public string ID
         {
             get;
         }
 
+        /// <summary>
+        ///     等级
+        /// </summary>
         public int Level
         {
             get;
         }
 
         /// <summary>
-        /// 统称，如 上海市
+        ///     名称
         /// </summary>
         public string Name
         {
             get;
         }
 
+        /// <summary>
+        ///     行政区划代码
+        /// </summary>
+        public string AdDivCode
+        {
+            get;
+        }
+
+        /// <summary>
+        ///     区号
+        /// </summary>
+        public string AreaCode
+        {
+            get;
+        }
+
+        /// <summary>
+        ///     邮政编码
+        /// </summary>
         public string ZipCode
         {
             get;
         }
 
         /// <summary>
-        /// 按照识别度（如：字符串长度）倒序排列的简称
+        ///     按照识别度（如：字符串长度）倒序排列的简称
         /// </summary>
         internal string[] ShortNames
         {
@@ -39,34 +67,42 @@ namespace AddressParsing
         }
 
         /// <summary>
-        /// 全称，如 上海市闵行区、上海闵行区、上海市闵行、上海闵行
+        ///     上级 Region ID
         /// </summary>
-        internal string[] PathNames
-        {
-            get;
-            set;
-        }
-
         public string ParentID
         {
             get;
         }
 
         [JsonConstructor]
-        public Region(
+        internal Region(
             string iD,
             int level,
             string name,
+            string adDivCode,
+            string areaCode,
             string zipCode,
             string[] shortNames,
             string parentID)
         {
-            ID = iD;
-            Level = level;
-            Name = name;
-            ZipCode = zipCode;
-            ShortNames = shortNames;
-            ParentID = parentID;
+            this.ID = iD;
+            this.Level = level;
+            this.Name = name;
+            this.AdDivCode = adDivCode;
+            this.AreaCode = areaCode;
+            this.ZipCode = zipCode;
+            this.ShortNames = shortNames;
+            this.ParentID = parentID;
+        }
+
+        /// <summary>
+        ///     全称，如 上海市闵行区、上海闵行区、上海市闵行、上海闵行
+        /// </summary>
+        [JsonIgnore]
+        internal string[] PathNames
+        {
+            get;
+            set;
         }
 
         [JsonIgnore]
