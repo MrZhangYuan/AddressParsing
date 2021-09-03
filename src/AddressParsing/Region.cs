@@ -120,6 +120,13 @@ namespace AddressParsing
         }
 
         [JsonIgnore]
+        public int IndexOfParent
+        {
+            get;
+            internal set;
+        }
+
+        [JsonIgnore]
         internal string[] ChildrenShortestNames
         {
             get;
