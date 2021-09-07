@@ -12,43 +12,6 @@ using System.Threading.Tasks;
 
 namespace AddressParsing
 {
-    public class Statics
-    {
-        public int CallStringIndexOfTimes { get; set; }
-        public int CallParsingAddressTimes { get; set; }
-        public int CallMatchTimes { get; set; }
-        public int CallMergeAndSortTimes { get; set; }
-        public int CallMergeTimes { get; set; }
-        public int CallIndexQuickMatchTimes { get; set; }
-        public int CallIsMatchedNameValidTimes { get; set; }
-        public int MatchLoopTimes { get; set; }
-
-        public void Reset()
-        {
-            this.CallStringIndexOfTimes = 0;
-            this.CallParsingAddressTimes = 0;
-            this.CallMatchTimes = 0;
-            this.CallMergeAndSortTimes = 0;
-            this.CallMergeTimes = 0;
-            this.CallIndexQuickMatchTimes = 0;
-            this.CallIsMatchedNameValidTimes = 0;
-            this.MatchLoopTimes = 0;
-        }
-
-        public override string ToString()
-        {
-            return $"{nameof(CallStringIndexOfTimes)}：{CallStringIndexOfTimes}{Environment.NewLine}"
-                + $"{nameof(CallParsingAddressTimes)}：{CallParsingAddressTimes}{Environment.NewLine}"
-                + $"{nameof(CallMatchTimes)}：{CallMatchTimes}{Environment.NewLine}"
-                + $"{nameof(CallMergeAndSortTimes)}：{CallMergeAndSortTimes}{Environment.NewLine}"
-                + $"{nameof(CallMergeTimes)}：{CallMergeTimes}{Environment.NewLine}"
-                + $"{nameof(CallIndexQuickMatchTimes)}：{CallIndexQuickMatchTimes}{Environment.NewLine}"
-                + $"{nameof(CallIsMatchedNameValidTimes)}：{CallIsMatchedNameValidTimes}{Environment.NewLine}"
-                + $"{nameof(MatchLoopTimes)}：{MatchLoopTimes}{Environment.NewLine}";
-        }
-    }
-
-
     /// <summary>
     ///     AddressParsing 算法，将常见的地址数据：家庭地址、工作地址等归一化
     ///     归一到 省 - 市 - 区 
@@ -69,15 +32,46 @@ namespace AddressParsing
     {
         private static List<Region> _sourceList = null;
         private static Dictionary<int, ReadOnlyCollection<Region>> _regionsByLevel = null;
-        private static string[] _rootLevelShortestShortName = null;
         private static int[] _sortedLevels = null;
+        private static int[] _topLevel2KeySortedLength = null;
+        private static readonly Dictionary<string, List<Region>> _topLevel2KeyedIndex = new Dictionary<string, List<Region>>();
 
+#if DEBUG
+        public class Static
+        {
+            public int CallStringIndexOfTimes { get; set; }
+            public int CallMatchTimes { get; set; }
+            public int CallIsMatchedNameValidTimes { get; set; }
+            public int MatchLoopTimes { get; set; }
+            public int PathNameSkip { get; set; }
 
-        public static Statics Statics
+            public void Reset()
+            {
+                this.CallStringIndexOfTimes = 0;
+                this.CallMatchTimes = 0;
+                this.CallIsMatchedNameValidTimes = 0;
+                this.MatchLoopTimes = 0;
+                this.PathNameSkip = 0;
+            }
+
+            public override string ToString()
+            {
+                return $"{nameof(CallStringIndexOfTimes)}：{CallStringIndexOfTimes}{Environment.NewLine}"
+                    + $"{nameof(CallMatchTimes)}：{CallMatchTimes}{Environment.NewLine}"
+                    + $"{nameof(CallIsMatchedNameValidTimes)}：{CallIsMatchedNameValidTimes}{Environment.NewLine}"
+                    + $"{nameof(MatchLoopTimes)}：{MatchLoopTimes}{Environment.NewLine}"
+                    + $"{nameof(PathNameSkip)}：{PathNameSkip}{Environment.NewLine}";
+            }
+        }
+#endif
+
+#if DEBUG
+        public static Static Statics
         {
             get;
             private set;
         }
+#endif
 
         /// <summary>
         ///     所有的区划
@@ -145,108 +139,16 @@ namespace AddressParsing
                                     );
             RegionsByLevel = new ReadOnlyDictionary<int, ReadOnlyCollection<Region>>(_regionsByLevel);
             _sortedLevels = RegionsByLevel.Keys.OrderBy(_p => _p).ToArray();
-            _rootLevelShortestShortName = RegionsByLevel[_sortedLevels[0]]
-                                        .Select(_p => _p.ShortNames[_p.ShortNames.Length - 1])
-                                        .ToArray();
 
+            BuildRootLevelIndex();
             BuildRelation();
-            BuildPathNames();
+            BuildPathNameAndSkips();
+            BuildTopLevel2QuickIndex();
 
-
-
-            Statics = new Statics();
-
-
-            //BuildIndex();
-            foreach (var item in _sourceList.Where(_p => _p.Parent != null))
-            {
-                item.IndexOfParent = item.Parent.Children.IndexOf(item);
-            }
-
-            //BuildKeyedRegions();
-            foreach (var region in _sourceList)
-            {
-                if (_nameKeyedRegions.TryGetValue(region.Name, out var namelist))
-                {
-                    namelist.Add(region);
-                }
-                else
-                {
-                    _nameKeyedRegions.Add(region.Name, new List<Region> { region });
-                }
-                if (!_nameSortedLength.Contains(region.Name.Length))
-                {
-                    _nameSortedLength.Add(region.Name.Length);
-                }
-                _nameSortedLength = _nameSortedLength.OrderBy(_p => _p).ToList();
-
-
-                if (region.ShortNames != null 
-                    && region.ShortNames.Length > 0)
-                {
-                    foreach (var shortname in region.ShortNames)
-                    {
-                        if (_shortNameKeyedRegions.TryGetValue(shortname, out var shortnamelist))
-                        {
-                            shortnamelist.Add(region);
-                        }
-                        else
-                        {
-                            _shortNameKeyedRegions.Add(shortname, new List<Region> { region });
-                        }
-                        if (!_shortNameSortedLength.Contains(shortname.Length))
-                        {
-                            _shortNameSortedLength.Add(shortname.Length);
-                        }
-                    }
-                    _shortNameSortedLength = _shortNameSortedLength.OrderBy(_p => _p).ToList();
-                }
-
-                if (region.PathNames != null
-                    && region.PathNames.Length > 0)
-                {
-                    foreach (var pathname in region.PathNames)
-                    {
-                        if (_pathNameKeyedRegions.TryGetValue(pathname, out var pathnamelist))
-                        {
-                            pathnamelist.Add(region);
-                        }
-                        else
-                        {
-                            _pathNameKeyedRegions.Add(pathname, new List<Region> { region });
-                        }
-                        if (!_pathNameSortedLength.Contains(pathname.Length))
-                        {
-                            _pathNameSortedLength.Add(pathname.Length);
-                        }
-                    }
-                    _pathNameSortedLength = _pathNameSortedLength.OrderBy(_p => _p).ToList();
-                }
-            }
+#if DEBUG
+            Statics = new Static();
+#endif
         }
-
-
-
-        public static List<int> _nameSortedLength = new List<int>();
-        public static Dictionary<string, List<Region>> _nameKeyedRegions = new Dictionary<string, List<Region>>();
-
-        public static List<int> _shortNameSortedLength = new List<int>();
-        public static Dictionary<string, List<Region>> _shortNameKeyedRegions = new Dictionary<string, List<Region>>();
-
-        public static List<int> _pathNameSortedLength = new List<int>();
-        public static Dictionary<string, List<Region>> _pathNameKeyedRegions = new Dictionary<string, List<Region>>();
-
-
-
-        private static void BuildSubstr(ref string address)
-        {
-
-
-
-
-
-        }
-
 
 
 
@@ -308,15 +210,116 @@ namespace AddressParsing
         }
 
 
-        private static void BuildPathNames()
+        private static void BuildPathNameAndSkips()
         {
             foreach (var item in Regions.Where(_p => _p.Parent != null))
             {
+                item.IndexOfParent = item.Parent.Children.IndexOf(item);
+
                 item.PathNames = item.BuildPathNames()
                                 .Except(item.ShortNames)
                                 .Except(new string[1] { item.Name })
                                 .OrderByDescending(_p => _p.Length)
                                 .ToArray();
+
+                item.PathNameSkip = new int[item.PathNames.Length];
+
+                for (int i = 0; i < item.PathNames.Length; i++)
+                {
+                    var ch = item.PathNames[i][0];
+
+                    for (int j = i + 1; j < item.PathNames.Length; j++)
+                    {
+                        var nextch = item.PathNames[j][0];
+                        if (ch == nextch)
+                        {
+                            item.PathNameSkip[i]++;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            foreach (var item in Regions)
+            {
+                if (item.ShortNames != null)
+                {
+                    item.ShortNameSkip = new bool[item.ShortNames.Length];
+
+                    var ch = item.Name[0];
+
+                    for (int i = 0; i < item.ShortNames.Length; i++)
+                    {
+                        if (item.ShortNames[i][0] == ch)
+                        {
+                            item.ShortNameSkip[i] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+
+        private static void BuildTopLevel2QuickIndex()
+        {
+            var level1and2 = RegionsByLevel[_sortedLevels[0]].Concat(RegionsByLevel[_sortedLevels[1]]);
+
+            foreach (var region in level1and2)
+            {
+                if (region.ShortNames != null
+                    && region.ShortNames.Length > 0)
+                {
+                    var matchkeys = region.ShortNames.ToList();
+                    matchkeys.Add(region.Name);
+
+                    for (int i = 0; i < matchkeys.Count; i++)
+                    {
+                        if (_topLevel2KeyedIndex.TryGetValue(matchkeys[i], out var exists))
+                        {
+                            //  exists 其实是个有序的 List， Level 小的放前面
+                            //  以便在快速匹配索引时提升准确度
+                            bool inserted = false;
+                            for (int j = 0; j < exists.Count; j++)
+                            {
+                                if (region.Level <= exists[j].Level)
+                                {
+                                    exists.Insert(j, region);
+                                    inserted = true;
+                                    break;
+                                }
+                            }
+
+                            if (!inserted)
+                            {
+                                exists.Add(region);
+                            }
+                        }
+                        else
+                        {
+                            _topLevel2KeyedIndex.Add(matchkeys[i], new List<Region> { region });
+                        }
+                    }
+                }
+            }
+
+            _topLevel2KeySortedLength = _topLevel2KeyedIndex.Keys
+                                    .Select(_p => _p.Length)
+                                    .Distinct()
+                                    .OrderBy(_p => _p)
+                                    .ToArray();
+        }
+
+
+        private static void BuildRootLevelIndex()
+        {
+            //  第一级 Region 的 IndexOfParent 设定为在根集合的索引
+            var rootregions = _regionsByLevel[_sortedLevels[0]];
+            for (int i = 0; i < rootregions.Count; i++)
+            {
+                rootregions[i].IndexOfParent = i;
             }
         }
 
@@ -326,6 +329,8 @@ namespace AddressParsing
         ///         顶级 <see cref="Region" /> 匹配优先级设置，算法内部将按照指定顺序对内部字典进行匹配
         ///         设置优先级有助于针对性的提升算法性能，如：
         ///         数据库地址全是“上海市”开头的地址，那么配置上海市优先，可将性能提升 10 ~ 20 倍
+        ///         注意：
+        ///             此方法并不是线程安全的，应该在首次匹配地址之前调用，且地址匹配期间不应再次调用，否则易产生意想不到的结果
         ///     </para>
         ///     <code>
         ///         //将“上海市”标记为匹配的最高优先级，当算法内部索引快速命中 <see cref="IndexQuickMatch(ref string, int, string[])" /> 
@@ -347,9 +352,7 @@ namespace AddressParsing
 
                 _regionsByLevel[rootlevel] = new ReadOnlyCollection<Region>(roots);
 
-                _rootLevelShortestShortName = RegionsByLevel[rootlevel]
-                                            .Select(_p => _p.ShortNames[_p.ShortNames.Length - 1])
-                                            .ToArray();
+                BuildRootLevelIndex();
             }
         }
 
@@ -432,26 +435,28 @@ namespace AddressParsing
 
             List<MatchRegionItem> matchitems = new List<MatchRegionItem>();
 
+#if DEBUG
             Statics.Reset();
-            Statics.CallParsingAddressTimes++;
+#endif
 
-            bool matchedbypath = false;
+            int pathmatchlevel = 0;
+            int index = 0;
+
+            //  启用前两级索引快速命中
+            //  命中：优先匹配命中 Region 的 TopParent
+            //  未命中：默认从 0 开始
+            if (IndexQuickMatchTopLevel2(ref address, 0, out var region, out int nextindex))
+            {
+                index = region.GetTopParent().IndexOfParent;
+            }
+
             Match(
                 RegionsByLevel[AddressParser._sortedLevels[0]],
-                IndexQuickMatch2(null, ref address, 0),
-                ref matchedbypath,
+                index,
+                ref pathmatchlevel,
                 ref address,
                 0,
                 matchitems);
-
-            if (matchedbypath
-                || matchitems.Count == 1)
-            {
-                return new List<RegionMatchResult>(1)
-                {
-                    new RegionMatchResult(matchitems[matchitems.Count - 1])
-                };
-            }
 
             return MergeAndSort(matchitems);
         }
@@ -478,26 +483,30 @@ namespace AddressParsing
         private static List<RegionMatchResult> MergeAndSort(
             List<MatchRegionItem> matchitems)
         {
-            Statics.CallMergeAndSortTimes++;
-
-            var matchresults = new List<RegionMatchResult>();
-
-            var namematch = matchitems
-                            .Where(_p => _p.MatchType == MatchType.Name)
-                            .ToArray();
-            if (namematch.Length > 0)
+            //  首先按照 MatchType 优先级选组
+            if (matchitems.Count > 1)
             {
-                Merge(ref matchresults, namematch);
+                matchitems = matchitems.MinGroup(_p => (int)_p.MatchType);
+            }
+
+            List<RegionMatchResult> matchresults = null;
+
+            //  合并结果
+            if (matchitems.Count > 1)
+            {
+                matchresults = new List<RegionMatchResult>();
+                Merge(ref matchresults, matchitems);
+            }
+            else if (matchitems.Count == 1)
+            {
+                matchresults = new List<RegionMatchResult>(1)
+                {
+                    new RegionMatchResult(matchitems[0])
+                };
             }
             else
             {
-                var shortmatch = matchitems
-                                .Where(_p => _p.MatchType == MatchType.ShortName)
-                                .ToArray();
-                if (shortmatch.Length > 0)
-                {
-                    Merge(ref matchresults, shortmatch);
-                }
+                matchresults = new List<RegionMatchResult>(0);
             }
 
             //  最小索引靠前的优先，后半部分详细地址造成误配概率大
@@ -551,8 +560,6 @@ namespace AddressParsing
             ref List<RegionMatchResult> matchresults,
             IEnumerable<MatchRegionItem> matchitemscope)
         {
-            Statics.CallMergeTimes++;
-
             var fulllevelgroup = matchitemscope
                                 .GroupBy(_p => _p.MatchRegion.Level)
                                 .ToDictionary(
@@ -603,6 +610,9 @@ namespace AddressParsing
         ///     <para>
         ///         在给定的起始位置往后的2-3（因为 <see cref="Region.ShortNames" /> 长度基本都小于3）个字符中，
         ///         快速命中指定 <see cref="Region" /> 的 <see cref="Region.ChildrenShortestNames" /> 的索引。
+        ///         注意：
+        ///             索引快速命中并不会改变算法的结果，只会改变算法匹配的优先级
+        ///             当快速命中无法有效命中索引时，算法依旧从索引 0 开始依次匹配
         ///     </para> 
         ///     <para>
         ///         这是个内部方法，该方法可能会被更名、删除等，并且不提供任何通知
@@ -635,29 +645,38 @@ namespace AddressParsing
 
             if (length > 0)
             {
-                Statics.CallIndexQuickMatchTimes++;
-
                 for (int i = 0; i < shortnames.Length; i++)
                 {
                     //  首先匹配第一个字符，在第一个字符存在的情况下再去匹配整个ShortName
                     //  这对单次的匹配到的情况下性能是不好的
                     //  但多数情况下是匹配不到的，所以在实测下有性能提升
-                    //  算法中这种写法随处可见
-                    var matchindex = address.IndexOf(
-                        shortnames[i][0],
-                        startindex,
-                        length);
-                    Statics.CallStringIndexOfTimes++;
 
-                    if (matchindex >= 0)
+                    var namelength = shortnames[i].Length;
+                    bool firsteq = false;
+                    var addch = address[startindex];
+                    var namech = shortnames[i][0];
+
+                    if (namelength == 2)
                     {
-                        matchindex = address.IndexOf(
-                            shortnames[i],
-                            startindex,
-                            length,
-                            StringComparison.Ordinal);
+                        firsteq = addch == namech
+                               || address[startindex + 1] == shortnames[i][0];
+                    }
+                    else if (namelength == 3)
+                    {
+                        firsteq = addch == namech;
+                    }
 
+                    if (firsteq)
+                    {
+                        int matchindex = address.IndexOf(
+                                        shortnames[i],
+                                        startindex,
+                                        length,
+                                        StringComparison.Ordinal);
+
+#if DEBUG
                         Statics.CallStringIndexOfTimes++;
+#endif
 
                         if (matchindex >= 0)
                         {
@@ -670,15 +689,54 @@ namespace AddressParsing
         }
 
 
-        private static int IndexQuickMatch2(
-            Region parent,
+        /// <summary>
+        ///     <para>
+        ///         快速命中前两级 <see cref="Region" />
+        ///         注意：
+        ///             索引快速命中并不会改变算法的结果，只会改变算法匹配的优先级
+        ///             当快速命中无法有效命中索引时，算法依旧从索引 0 开始依次匹配
+        ///     </para> 
+        ///     <para>
+        ///         这是个内部方法，该方法可能会被更名、删除等，并且不提供任何通知
+        ///     </para>
+        /// </summary>
+        /// <param name="address"> 指定的地址字符串 </param>
+        /// <param name="startindex"> 开始匹配的位置 </param>
+        /// <param name="region">
+        ///     <para>
+        ///         输出参数，命中时命中的 <see cref="Region" /> 。
+        ///     </para> 
+        /// </param>
+        /// <param name="nextindex">
+        ///     <para>
+        ///         输出参数，命中时下次匹配时的地址起始索引。
+        ///     </para> 
+        /// </param>
+        /// <returns> 是否命中前两级 <see cref="Region" /> </returns>
+        private static bool IndexQuickMatchTopLevel2(
             ref string address,
-            int startindex)
+            int startindex,
+            out Region region,
+            out int nextindex)
         {
-            
-            return 0;
-        }
+            startindex = startindex >= 0 && startindex < address.Length ? startindex : 0;
 
+            region = null;
+            nextindex = startindex;
+            var lastlength = address.Length - startindex;
+
+            for (int i = 0; i < _topLevel2KeySortedLength.Length && _topLevel2KeySortedLength[i] <= lastlength; i++)
+            {
+                if (_topLevel2KeyedIndex.TryGetValue(address.Substring(startindex, _topLevel2KeySortedLength[i]), out var list))
+                {
+                    nextindex += _topLevel2KeySortedLength[i];
+                    region = list[0];
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
 
         /// <summary>
@@ -691,12 +749,10 @@ namespace AddressParsing
         /// </summary>
         /// <param name="regionscope"> 需要循环匹配的 <see cref="Region" /> 列表 </param>
         /// <param name="looppriorityindex"> 循环的优先索引 </param>
-        /// <param name="matchedbypath"> 
+        /// <param name="pathmatchlevel"> 
         ///     <para>
-        ///         引用参数：是否 <see cref="MatchType.PathName" /> 命中，最下级的 <see cref="MatchType.PathName" /> 命中具有绝对的优先权
-        ///     </para>
-        ///     <para>
-        ///         一旦命中，会终止整个算法，并直接返回结果。
+        ///         引用参数： <see cref="MatchType.PathName" /> 命中的 <see cref="Region" /> 的 Level
+        ///             当命中的 <see cref="Region" /> 的 Level 处于最下级时，算法直接返回
         ///     </para>
         /// </param>
         /// <param name="address"> 给定的地址 </param>
@@ -705,7 +761,7 @@ namespace AddressParsing
         private static void Match(
             IList<Region> regionscope,
             int looppriorityindex,
-            ref bool matchedbypath,
+            ref int pathmatchlevel,
             ref string address,
             int startindex,
             List<MatchRegionItem> matchitems)
@@ -720,11 +776,13 @@ namespace AddressParsing
             int loopcount = regionscope.Count;
             bool handled = false;
 
+#if DEBUG
             Statics.CallMatchTimes++;
+#endif
 
             for (int k = looppriorityindex; k < loopcount; k++)
             {
-                if (matchedbypath)
+                if (pathmatchlevel == _sortedLevels[_sortedLevels.Length - 1])
                 {
                     return;
                 }
@@ -735,27 +793,33 @@ namespace AddressParsing
                     continue;
                 }
 
+#if DEBUG
                 Statics.MatchLoopTimes++;
+#endif
 
                 var current = regionscope[k];
                 int index = -1;
                 MatchType? matchtype = null;
                 string matchname = string.Empty;
 
+                bool needskip = true;
+
                 //  匹配优先级，优先匹配 MatchType.Name
                 //  若匹配不到 MatchType.Name，则匹配 MatchType.ShortName
                 //  若匹配到 MatchType.Name，不匹配 MatchType.ShortName
                 //  MatchType.Name 和  MatchType.ShortName 其一，就匹配 MatchType.PathName
                 //  最下级的 MatchType.PathName 匹配具有绝对的优先级，一旦匹配到，算法终止，返回结果
-                Statics.CallStringIndexOfTimes++;
-
                 if (address.IndexOf(current.Name[0], startindex) >= 0)
                 {
                     var matchindex = address.IndexOf(
-                                    current.Name,
-                                    startindex,
-                                    StringComparison.Ordinal);
+                                current.Name,
+                                startindex,
+                                StringComparison.Ordinal);
+                    needskip = false;
+
+#if DEBUG
                     Statics.CallStringIndexOfTimes++;
+#endif
 
                     if (matchindex >= 0)
                     {
@@ -770,7 +834,11 @@ namespace AddressParsing
                 {
                     for (int i = 0; i < current.ShortNames.Length; i++)
                     {
-                        Statics.CallStringIndexOfTimes++;
+                        if (needskip
+                            && current.ShortNameSkip[i])
+                        {
+                            continue;
+                        }
 
                         if (address.IndexOf(current.ShortNames[i][0], startindex) >= 0)
                         {
@@ -779,7 +847,9 @@ namespace AddressParsing
                                             startindex,
                                             StringComparison.Ordinal);
 
+#if DEBUG
                             Statics.CallStringIndexOfTimes++;
+#endif
 
                             //  MatchType.ShortName 匹配时，会出现“匹配到，但不是”的情况：
                             //  上海市闸北区西藏南路 - 西藏
@@ -804,7 +874,10 @@ namespace AddressParsing
                 {
                     for (int i = 0; i < current.PathNames.Length; i++)
                     {
+
+#if DEBUG
                         Statics.CallStringIndexOfTimes++;
+#endif
 
                         if (address.IndexOf(current.PathNames[i][0]) >= 0)
                         {
@@ -812,20 +885,27 @@ namespace AddressParsing
                                             current.PathNames[i],
                                             StringComparison.Ordinal);
 
+#if DEBUG
                             Statics.CallStringIndexOfTimes++;
+#endif
 
                             if (matchindex >= 0)
                             {
                                 index = matchindex;
                                 matchtype = MatchType.PathName;
                                 matchname = current.PathNames[i];
-
-                                if (current.Level == _sortedLevels[_sortedLevels.Length - 1])
-                                {
-                                    matchedbypath = true;
-                                }
+                                pathmatchlevel = current.Level;
                                 break;
                             }
+                        }
+                        else
+                        {
+
+#if DEBUG
+                            Statics.PathNameSkip += current.PathNameSkip[i];
+#endif
+
+                            i += current.PathNameSkip[i];
                         }
                     }
                 }
@@ -842,26 +922,13 @@ namespace AddressParsing
                     index += matchname.Length;
                 }
 
-
-
-
-
-
-
-
-                //var quickindex = IndexQuickMatch2(current, ref address, index);
-
-
-
-
-
                 //  递归匹配当前 Region 的 Children
                 //  若当前 Region 的 Level 非最后一级，启用 IndexQuickMatch 来快速命中下级索引
                 Match(
                     current.Children,
                     index > 0
-                        && current.Level < _sortedLevels[_sortedLevels.Length - 1] ? IndexQuickMatch2(current, ref address, index) : 0,
-                    ref matchedbypath,
+                        && current.Level < _sortedLevels[_sortedLevels.Length - 1] ? IndexQuickMatch(ref address, index, current.ChildrenShortestNames) : 0,
+                    ref pathmatchlevel,
                     ref address,
                     index,
                     matchitems);
@@ -876,7 +943,6 @@ namespace AddressParsing
                 }
             }
         }
-
 
         /// <summary>
         ///     从给定地址的给定位置开始向前和向后2个字符中
@@ -894,8 +960,10 @@ namespace AddressParsing
             if (startindex >= 0
                 && startindex < address.Length)
             {
-                Statics.CallIsMatchedNameValidTimes++;
 
+#if DEBUG
+                Statics.CallIsMatchedNameValidTimes++;
+#endif
                 int offset = 2;
                 var substr = string.Empty;
 

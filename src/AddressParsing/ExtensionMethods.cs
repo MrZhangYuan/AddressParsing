@@ -32,7 +32,7 @@ namespace AddressParsing
         public static List<T> MinGroup<T>(this IEnumerable<T> source, Func<T, int> keyselector)
         {
             int min = int.MaxValue;
-            List<T> groups = new List<T>();
+            List<T> groups = new List<T>(3);
 
             foreach (var item in source)
             {
