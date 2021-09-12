@@ -13,7 +13,7 @@ namespace Demo
     {
         static void Main(string[] args)
         {
-            //设置一级区划匹配优先级，当地址不是以一级区划（省、直辖市、自治区）开头时，优先匹配的一级区划
+            //设置一级区划匹配优先级，优先匹配的一级区划，该配置优先级小于算法快速命中的优先级
             AddressParser.MakePrioritySort(
                     _p =>
                     {
@@ -32,30 +32,22 @@ namespace Demo
                     }
                 );
 
-            //单次处理demo
+
             while (true)
             {
                 Console.Write("地址：");
                 var address = Console.ReadLine();
 
-                
-                {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    List<RegionMatchResult> matchitems = null;
-                    for (int i = 0; i < 1; i++)
-                    {
-                        matchitems = AddressParser.ParsingAddress(address);
-                    }
-                    sw.Stop();
-                    Console.WriteLine(sw.Elapsed);
+                Stopwatch sw = Stopwatch.StartNew();
+                List<RegionMatchResult> matchitems = AddressParser.ParsingAddress(address);
+                sw.Stop();
+                Console.WriteLine("TimeCost：\t" + sw.Elapsed);
 
-                    foreach (var matchitem in matchitems)
-                    {
-                        Console.WriteLine(matchitem);
-                        Console.WriteLine("处理：" + AddressParser.FinalCut(matchitem, address));
-                    }
+                foreach (var matchitem in matchitems)
+                {
+                    Console.WriteLine(matchitem);
+                    Console.WriteLine("Format：\t" + AddressParser.Format(matchitem, address));
                 }
-                
 
 #if DEBUG
                 Console.WriteLine(AddressParser.Statics);
@@ -66,35 +58,33 @@ namespace Demo
 
 
 
-            /*
-            //批处理
-            {
-                var linest = File.ReadAllLines("AddressTest3.txt");
 
-                int process = linest.Length;
+            //{
+            //    var linest = File.ReadAllLines("AddressTest3.txt");
 
-                string[] lines = new string[process];
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    lines[i] = linest[i % linest.Length];
-                }
+            //    int process = linest.Length;
 
-                List<RegionMatchResult>[] results = new List<RegionMatchResult>[lines.Length];
+            //    string[] lines = new string[process];
+            //    for (int i = 0; i < lines.Length; i++)
+            //    {
+            //        lines[i] = linest[i % linest.Length];
+            //    }
 
-                //单线程
-                while (true)
-                {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    for (int i = 0; i < lines.Length; i++)
-                    {
-                        results[i] = AddressParser.ParsingAddress(lines[i]);
-                    }
-                    sw.Stop();
-                    Console.WriteLine(sw.Elapsed);
-                    Console.ReadKey();
-                }
-            }
-            */
+            //    List<RegionMatchResult>[] results = new List<RegionMatchResult>[lines.Length];
+
+            //    while (true)
+            //    {
+            //        Stopwatch sw = Stopwatch.StartNew();
+            //        for (int i = 0; i < lines.Length; i++)
+            //        {
+            //            results[i] = AddressParser.ParsingAddress(lines[i]);
+            //        }
+            //        sw.Stop();
+            //        Console.WriteLine(sw.Elapsed);
+            //        Console.ReadKey();
+            //    }
+            //}
+
         }
     }
 }

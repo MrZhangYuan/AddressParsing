@@ -2,23 +2,6 @@
 
 namespace AddressParsing
 {
-
-    public enum MatchType
-    {
-        /// <summary>
-        /// 路径名称命中
-        /// </summary>
-        PathName = 0,
-        /// <summary>
-        /// 全称命中
-        /// </summary>
-        Name = 1,
-        /// <summary>
-        /// 简称命中
-        /// </summary>
-        ShortName = 2
-    }
-
     public class MatchRegionItem
     {
         public Region MatchRegion
@@ -61,7 +44,7 @@ namespace AddressParsing
 
         public override string ToString()
         {
-            return $"MatchType:{MatchType}, MatchIndex:{MatchIndex}, MatchName:{MatchName}, MatchRegion:{MatchRegion}";// this.MatchRegion.ToString();
+            return $"MatchType:\t{MatchType}{Environment.NewLine}MatchIndex:\t{MatchIndex}{Environment.NewLine}MatchName:\t{MatchName}{Environment.NewLine}MatchRegion:\t{MatchRegion}";// this.MatchRegion.ToString();
         }
     }
 }

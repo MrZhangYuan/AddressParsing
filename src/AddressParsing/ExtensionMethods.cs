@@ -1,55 +1,248 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace AddressParsing
 {
-    public static class ExtensionMethods
+    internal static class ExtensionMethods
     {
-        public static List<T> MaxGroup<T>(this IEnumerable<T> source, Func<T, int> keyselector)
+        public static List<T> MaxGroup<T>(this List<T> source, Func<T, int> keyselector)
         {
-            int max = int.MinValue;
-            List<T> groups = new List<T>();
-
-            foreach (var item in source)
+            if (source.Count <= 1)
             {
-                var value = keyselector(item);
-                if (value > max)
+                return source;
+            }
+
+            if (source.Count == 2)
+            {
+                var val1 = keyselector(source[0]);
+                var val2 = keyselector(source[1]);
+                if (val1 == val2)
                 {
-                    groups.Clear();
-                    max = value;
-                    groups.Add(item);
+                    return source;
                 }
-                else if (value == max)
+                else if (val1 > val2)
                 {
-                    groups.Add(item);
+                    source.RemoveAt(1);
+                    return source;
+                }
+                else
+                {
+                    source.RemoveAt(0);
+                    return source;
                 }
             }
 
-            return groups;
+            if (source.Count == 3)
+            {
+                var val1 = keyselector(source[0]);
+                var val2 = keyselector(source[1]);
+                var val3 = keyselector(source[2]);
+
+                if (val1 == val2)
+                {
+                    if (val1 == val3)
+                    {
+                        return source;
+                    }
+                    else if (val1 > val3)
+                    {
+                        source.RemoveAt(2);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                }
+                else if (val1 > val2)
+                {
+                    if (val1 == val3)
+                    {
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                    else if (val1 > val3)
+                    {
+                        source.RemoveAt(1);
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                }
+                else
+                {
+                    if (val2 == val3)
+                    {
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                    else if (val2 > val3)
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                }
+            }
+
+
+            if (source.Count > 3)
+            {
+                int max = int.MinValue;
+                List<T> groups = new List<T>(source.Count);
+
+                for (int i = 0; i < source.Count; i++)
+                {
+                    var value = keyselector(source[i]);
+                    if (value > max)
+                    {
+                        groups.Clear();
+                        max = value;
+                        groups.Add(source[i]);
+                    }
+                    else if (value == max)
+                    {
+                        groups.Add(source[i]);
+                    }
+                }
+                return groups;
+            }
+
+            return new List<T>(0);
         }
 
-        public static List<T> MinGroup<T>(this IEnumerable<T> source, Func<T, int> keyselector)
+        public static List<T> MinGroup<T>(this List<T> source, Func<T, int> keyselector)
         {
-            int min = int.MaxValue;
-            List<T> groups = new List<T>(3);
-
-            foreach (var item in source)
+            if (source.Count <= 1)
             {
-                var value = keyselector(item);
-                if (value < min)
+                return source;
+            }
+
+            if (source.Count == 2)
+            {
+                var val1 = keyselector(source[0]);
+                var val2 = keyselector(source[1]);
+                if (val1 == val2)
                 {
-                    groups.Clear();
-                    min = value;
-                    groups.Add(item);
+                    return source;
                 }
-                else if (value == min)
+                else if (val1 > val2)
                 {
-                    groups.Add(item);
+                    source.RemoveAt(0);
+                    return source;
+                }
+                else
+                {
+                    source.RemoveAt(1);
+                    return source;
                 }
             }
 
-            return groups;
+            if (source.Count == 3)
+            {
+                var val1 = keyselector(source[0]);
+                var val2 = keyselector(source[1]);
+                var val3 = keyselector(source[2]);
+
+                if (val1 == val2)
+                {
+                    if (val1 == val3)
+                    {
+                        return source;
+                    }
+                    else if (val1 > val3)
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(2);
+                        return source;
+                    }
+                }
+                else if (val1 > val2)
+                {
+                    if (val2 == val3)
+                    {
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                    else if (val2 > val3)
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                }
+                else
+                {
+                    if (val1 == val3)
+                    {
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                    else if (val1 > val3)
+                    {
+                        source.RemoveAt(0);
+                        source.RemoveAt(0);
+                        return source;
+                    }
+                    else
+                    {
+                        source.RemoveAt(1);
+                        source.RemoveAt(1);
+                        return source;
+                    }
+                }
+            }
+
+
+            if (source.Count > 3)
+            {
+                int min = int.MaxValue;
+                List<T> groups = new List<T>(3);
+
+                for (int i = 0; i < source.Count; i++)
+                {
+                    var value = keyselector(source[i]);
+                    if (value < min)
+                    {
+                        groups.Clear();
+                        min = value;
+                        groups.Add(source[i]);
+                    }
+                    else if (value == min)
+                    {
+                        groups.Add(source[i]);
+                    }
+                }
+                return groups;
+            }
+
+            return new List<T>(0);
         }
 
         public static void RemoveChars(ref string sourcestr, char[] chars)

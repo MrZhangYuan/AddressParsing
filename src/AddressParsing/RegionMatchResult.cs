@@ -9,7 +9,7 @@ namespace AddressParsing
         public int Weight
         {
             get;
-            set;
+            internal set;
         }
 
         public MatchRegionItem PathEndItem
@@ -31,7 +31,7 @@ namespace AddressParsing
 
         public override string ToString()
         {
-            return $"Weight:{Weight}{Environment.NewLine}MatchedRegions:{PathEndItem}";
+            return $"Weight:\t\t{Weight}{Environment.NewLine}{PathEndItem}";
         }
     }
 }
