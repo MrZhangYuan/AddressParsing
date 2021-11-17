@@ -23005,6 +23005,20 @@
         "ParentID": "C_0154"
     },
     {
+        "ID": "A_01376_1",
+        "Level": 3,
+        "Name": "东湖高新技术开发区",
+        "AdDivCode": "420112",
+        "AreaCode": "027",
+        "ZipCode": "430040",
+        "ShortNames": [
+            "东湖新技术开发区",
+            "东湖高新区",
+            "东湖开发区"
+        ],
+        "ParentID": "C_0154"
+    },
+    {
         "ID": "A_01377",
         "Level": 3,
         "Name": "汉南区",
@@ -24237,6 +24251,18 @@
         "ZipCode": "410300",
         "ShortNames": [
             "浏阳"
+        ],
+        "ParentID": "C_0168"
+    },
+    {
+        "ID": "A_01479_1",
+        "Level": 3,
+        "Name": "高新区",
+        "AdDivCode": "",
+        "AreaCode": "0731",
+        "ZipCode": "410000",
+        "ShortNames": [
+            "高新区"
         ],
         "ParentID": "C_0168"
     },

@@ -105,6 +105,26 @@ namespace AddressParsing
             set;
         }
 
+        /// <summary>
+        ///     PathNames 的匹配跳跃表
+        /// </summary>
+        [JsonIgnore]
+        internal int[] PathNameSkip
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        ///     ShortName 的跳跃表
+        /// </summary>
+        [JsonIgnore]
+        internal bool[] ShortNameSkip
+        {
+            get;
+            set;
+        }
+
         [JsonIgnore]
         public Region Parent
         {
@@ -117,6 +137,13 @@ namespace AddressParsing
         {
             get;
             internal set;
+        }
+
+        [JsonIgnore]
+        internal int IndexOfParent
+        {
+            get;
+            set;
         }
 
         [JsonIgnore]
@@ -193,6 +220,22 @@ namespace AddressParsing
                     yield return shortname;
                 }
             }
+        }
+
+        public Region GetTopParent()
+        {
+            var parent = this.Parent;
+            if (parent == null)
+            {
+                return this;
+            }
+
+            while (parent.Parent != null)
+            {
+                parent = parent.Parent;
+            }
+
+            return parent;
         }
 
         public bool PathContains(Region region)
