@@ -43,14 +43,14 @@ PM> Install-Package AddressParsing
 ​	宿州市 -> 安徽省 - 宿州市  
 ​	砀山县 -> 安徽省 - 宿州市 - 砀山县  
 **首先准备以下数据结构：**
-![](resources\struct.png)
+![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/struct.png)
 
 **拿一个最简单的地址描述一下最基本的原理：**
 1. **移除常用分隔符**
-![](resources\1.png)
+![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/1.png)
 
 2. **循环和递归匹配**
-![](resources\2.png)
+![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/2.png)
 
 3. **结果规则处理**
    若以上两步包含多个结果，进行同路径结果合并，权重计算等
@@ -85,10 +85,10 @@ PM> Install-Package AddressParsing
 
 ## **性能**
 
-**配置i7-8750H，单核最高睿频4.1，内存随意，以下测试在Debug模式（Release会快30%）**
+**配置i7-8750H，单核最高睿频4.1，内存随意，以下测试在Debug模式（Release会快30%）**  
 1：一二级区划（省、自治区、直辖市，市）开头的地址，单次匹配≈0.017毫秒，每秒可处理地址数量：60000
-**MatchType** 基本都是 **PathName** 具有最高的优先级
-从 **IndexQuickTop2Matched**、**IndexQuickMatched** 可以看出有效的命中了索引（此索引非彼索引，此索引为数组位置）
+**MatchType** 基本都是 **PathName** 具有最高的优先级  
+从 **IndexQuickTop2Matched**、**IndexQuickMatched** 可以看出有效的命中了索引（此索引非彼索引，此索引为数组位置）  
 从 **MatchLoopTimes**、**CallStringIndexOfTimes** 可以看出只进行了极少的循环匹配次数，在 **54000+** 的数据组合中基本算是“直达”的了。
 ```
 地址：江苏省南京市江宁区天元中路168号诚基大厦利源集团
@@ -161,8 +161,8 @@ PathNameSkip：                  0
 IndexQuickTop2Matched：         1
 IndexQuickMatched：             0
 ```
-2：三级区划（市辖区、县）开头的地址，由于三级区划数量太多，重名概率极大未设计快速索引，单次匹配≈0.4毫秒，每秒处理地址数量：2500
-可以看出 **CallStringIndexOfTimes**、**MatchLoopTimes** 明显很大，基本算是“暴力循环，选择匹配”了。
+2：三级区划（市辖区、县）开头的地址，由于三级区划数量太多，重名概率极大未设计快速索引，单次匹配≈0.4毫秒，每秒处理地址数量：2500  
+可以看出 **CallStringIndexOfTimes**、**MatchLoopTimes** 明显很大，基本算是“暴力循环，选择匹配”了。  
 有的虽然 **IndexQuickTop2Matched** 但是 **MatchType** 是 **Name** 优先级较低，还需要继续匹配
 ```
 地址：番禺区南村镇南光路32号A首层
@@ -279,8 +279,8 @@ IndexQuickTop2Matched：         1
 IndexQuickMatched：             1
 ```
 
-省去一些级别的区划或加入其它干扰字符，可以看出**MatchLoopTimes**明显变大，表名优先级不能明确确定，需要更多的处理和比对，因为 **MatchType = ShortName** 是无法确定一个地址的，最后一个匹配会匹配到 **ShortName = 砀山 和 PathName = 河南开封** 所以取了河南开封，这在预期之内。
-以下示例中 MatchName:砀山 并不准确，其实部分也会命中 安徽、宿州等，只不过最后做了同路径合并，所以 **Weight** 会大于1
+省去一些级别的区划或加入其它干扰字符，可以看出**MatchLoopTimes**明显变大，表名优先级不能明确确定，需要更多的处理和比对，因为 **MatchType = ShortName** 是无法确定一个地址的，最后一个匹配会匹配到 **ShortName = 砀山 和 PathName = 河南开封** 所以取了河南开封，这在预期之内。  
+以下示例中 MatchName:砀山 并不准确，其实部分也会命中 安徽、宿州等，只不过最后做了同路径合并，所以 **Weight** 会大于1  
 另外一些规则这里不做赘述，请参见源码。
 
 ```
