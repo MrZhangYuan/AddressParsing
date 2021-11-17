@@ -28,52 +28,53 @@ PM> Install-Package AddressParsing
 **概念：**
 
 **Name：**  
-​	安徽省 -> 安徽省
-​	宿州市 -> 宿州市  
-​	砀山县 -> 砀山县  
+	安徽省 -> 安徽省
+	宿州市 -> 宿州市  
+	砀山县 -> 砀山县  
 **ShortName：**可有多个  
-​	安徽省 -> 安徽  
-​	宿州市 -> 宿州、宿县  
-​	砀山县 -> 砀山  
+	安徽省 -> 安徽  
+	宿州市 -> 宿州、宿县  
+	砀山县 -> 砀山  
 **PathName：**顶级地址不用设置PathName，二三级区划（路径名称按照字符串长度降序排列，其实就是直属的和间接直属的Name和ShortName的组合）：  
-​	宿州市的路径名称为：安徽省宿州市、安徽省宿州、安徽宿州市、安徽宿州  
-​	砀山县的路径名称为：安徽省宿州市砀山县、安徽省宿州市砀山、安徽宿州市砀山县、安徽宿州砀山，宿州市砀山县、宿州砀山、……  
+	宿州市的路径名称为：安徽省宿州市、安徽省宿州、安徽宿州市、安徽宿州  
+	砀山县的路径名称为：安徽省宿州市砀山县、安徽省宿州市砀山、安徽宿州市砀山县、安徽宿州砀山，宿州市砀山县、宿州砀山、……  
 **Path：**  
-​	安徽省 -> 安徽省  
-​	宿州市 -> 安徽省 - 宿州市  
-​	砀山县 -> 安徽省 - 宿州市 - 砀山县  
+	安徽省 -> 安徽省  
+	宿州市 -> 安徽省 - 宿州市  
+	砀山县 -> 安徽省 - 宿州市 - 砀山县  
 **首先准备以下数据结构：**
-![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/struct.png)
+![Overview](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/struct.png)
 
 **拿一个最简单的地址描述一下最基本的原理：**
+
 1. **移除常用分隔符**
-![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/1.png)
+![Overview](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/1.png)
 
 2. **循环和递归匹配**
-![](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/2.png)
+![Overview](https://github.com/MrZhangYuan/AddressParsing/blob/master/resources/2.png)
 
 3. **结果规则处理**
    若以上两步包含多个结果，进行同路径结果合并，权重计算等
    **没错！整个算法思想就是这么简单，但是我加入了一些小小的技巧（这些技巧有的是一行代码，有的是一块代码，有的是一个设计，具体不在这里描述，需要了解请阅读源码），使得算法在面对大量形态各异的地址文本时，无论是匹配的精准度还是性能都有着极强的表现：**
 
-    手工精调的完备字典
-    近乎全覆盖的数据组合
-    地址格式化
-    地址裁剪
-    一二级索引快速命中（v2.0beta）
-    循环优先级
-    匹配模式优先级
-    同级PathName优先级
-    Name、ShortName、PathName优先级匹配
-    可配置的一级区划优先级
-    ShortName匹配跳跃（v2.0beta）
-    PathName匹配跳跃（v2.0beta）
-    特殊匹配名称排除
-    同路径合并
-    命中索引优先级
-    命中字数优先级
-    命中等级优先级
-    ......
+    手工精调的完备字典  
+    近乎全覆盖的数据组合  
+    地址格式化  
+    地址裁剪  
+    一二级索引快速命中（v2.0beta）  
+    循环优先级  
+    匹配模式优先级  
+    同级PathName优先级  
+    Name、ShortName、PathName优先级匹配  
+    可配置的一级区划优先级  
+    ShortName匹配跳跃（v2.0beta）  
+    PathName匹配跳跃（v2.0beta）  
+    特殊匹配名称排除  
+    同路径合并  
+    命中索引优先级  
+    命中字数优先级  
+    命中等级优先级  
+    ......  
 
 
 
