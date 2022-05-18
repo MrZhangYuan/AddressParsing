@@ -9,6 +9,10 @@
     <ProjectReference Include="..\..\src\AddressParsing\AddressParsing.csproj" />
   </ItemGroup>
 
+	<ItemGroup>
+		<PackageReference Include="NPinyin.Core" Version="2.1.3" />
+	</ItemGroup>
+	
   <ItemGroup>
     <None Update="AddressTest.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

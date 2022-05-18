@@ -31,9 +31,6 @@ namespace AddressParsing
     /// </remarks>
     public static class AddressParser
     {
-        private static List<Region> _sourceList = null;
-        private static Dictionary<int, ReadOnlyCollection<Region>> _regionsByLevel = null;
-        private static int[] _sortedLevels = null;
         private static int[] _topLevel2KeySortedLength = null;
         private static readonly Dictionary<string, List<Region>> _topLevel2KeyedIndex = new Dictionary<string, List<Region>>();
 
@@ -75,26 +72,6 @@ namespace AddressParsing
 #endif
 
         /// <summary>
-        ///     所有的区划
-        /// </summary>
-        public static ReadOnlyCollection<Region> Regions
-        {
-            get;
-            private set;
-        }
-
-
-        /// <summary>
-        ///     按区划等级分组的只读字典
-        /// </summary>
-        public static ReadOnlyDictionary<int, ReadOnlyCollection<Region>> RegionsByLevel
-        {
-            get;
-            private set;
-        }
-
-
-        /// <summary>
         ///     地址常用分割符，用来首次处理地址时移除
         /// </summary>
         private static char[] SplitterChars { get; } = new char[]
@@ -130,20 +107,6 @@ namespace AddressParsing
 
         static AddressParser()
         {
-            var regions = ReadRegionsFile();
-            _sourceList = JsonConvert.DeserializeObject<List<Region>>(regions);
-            Regions = new ReadOnlyCollection<Region>(_sourceList);
-            _regionsByLevel = Regions.GroupBy(_p => _p.Level)
-                                    .ToDictionary(
-                                        _p => _p.Key,
-                                        _p => new ReadOnlyCollection<Region>(_p.ToList())
-                                    );
-            RegionsByLevel = new ReadOnlyDictionary<int, ReadOnlyCollection<Region>>(_regionsByLevel);
-            _sortedLevels = RegionsByLevel.Keys.OrderBy(_p => _p).ToArray();
-
-            BuildRootLevelIndex();
-            BuildRelation();
-            BuildPathNameAndSkips();
             BuildTopLevel2QuickIndex();
 
 #if DEBUG
@@ -152,121 +115,9 @@ namespace AddressParsing
         }
 
 
-
-        private static string ReadRegionsFile()
-        {
-            using (Stream sm = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{Assembly.GetExecutingAssembly().GetName().Name}.Regions.json"))
-            {
-                if (sm == null)
-                {
-                    return string.Empty;
-                }
-                byte[] bs = new byte[sm.Length];
-                sm.Read(bs, 0, (int)sm.Length);
-                return Encoding.UTF8.GetString(bs);
-            }
-        }
-
-
-        private static void BuildRelation()
-        {
-            foreach (var item in RegionsByLevel)
-            {
-                if (RegionsByLevel.TryGetValue(item.Key + 1, out var children)
-                    && children != null)
-                {
-                    foreach (var region in item.Value)
-                    {
-                        var currentchildren = children
-                                            .Where(_p => _p.ParentID == region.ID)
-                                            .ToList();
-                        region.Children = new ReadOnlyCollection<Region>(currentchildren);
-
-                        region.ChildrenShortestNames = currentchildren
-                                                    .Where(
-                                                        _p => _p.ShortNames != null
-                                                                && _p.ShortNames.Length > 0
-                                                    )
-                                                    .Select(
-                                                        _p => _p.ShortNames[_p.ShortNames.Length - 1]
-                                                    )
-                                                    .ToArray();
-                    }
-                }
-
-                if (RegionsByLevel.TryGetValue(item.Key - 1, out var parents)
-                    && parents != null)
-                {
-                    var parentdict = parents.ToDictionary(_p => _p.ID);
-
-                    foreach (var region in item.Value)
-                    {
-                        if (parentdict.TryGetValue(region.ParentID, out var parent))
-                        {
-                            region.Parent = parent;
-                        }
-                    }
-                }
-            }
-        }
-
-
-        private static void BuildPathNameAndSkips()
-        {
-            foreach (var item in Regions.Where(_p => _p.Parent != null))
-            {
-                item.IndexOfParent = item.Parent.Children.IndexOf(item);
-
-                item.PathNames = item.BuildPathNames()
-                                .Except(item.ShortNames)
-                                .Except(new string[1] { item.Name })
-                                .OrderByDescending(_p => _p.Length)
-                                .ToArray();
-
-                item.PathNameSkip = new int[item.PathNames.Length];
-
-                for (int i = 0; i < item.PathNames.Length; i++)
-                {
-                    var ch = item.PathNames[i][0];
-
-                    for (int j = i + 1; j < item.PathNames.Length; j++)
-                    {
-                        var nextch = item.PathNames[j][0];
-                        if (ch == nextch)
-                        {
-                            item.PathNameSkip[i]++;
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-
-            foreach (var item in Regions)
-            {
-                if (item.ShortNames != null)
-                {
-                    item.ShortNameSkip = new bool[item.ShortNames.Length];
-
-                    var ch = item.Name[0];
-
-                    for (int i = 0; i < item.ShortNames.Length; i++)
-                    {
-                        if (item.ShortNames[i][0] == ch)
-                        {
-                            item.ShortNameSkip[i] = true;
-                        }
-                    }
-                }
-            }
-        }
-
-
         private static void BuildTopLevel2QuickIndex()
         {
-            var level1and2 = RegionsByLevel[_sortedLevels[0]].Concat(RegionsByLevel[_sortedLevels[1]]);
+            var level1and2 = BasicData.RegionsByLevel[BasicData.SortedLevels[0]].Concat(BasicData.RegionsByLevel[BasicData.SortedLevels[1]]);
 
             foreach (var region in level1and2)
             {
@@ -314,48 +165,20 @@ namespace AddressParsing
         }
 
 
-        private static void BuildRootLevelIndex()
-        {
-            //  第一级 Region 的 IndexOfParent 设定为在根集合的索引
-            var rootregions = _regionsByLevel[_sortedLevels[0]];
-            for (int i = 0; i < rootregions.Count; i++)
-            {
-                rootregions[i].IndexOfParent = i;
-            }
-        }
+        //private static void BuildRootLevelIndex()
+        //{
+        //    //  第一级 Region 的 IndexOfParent 设定为在根集合的索引
+        //    var rootregions = _regionsByLevel[_sortedLevels[0]];
+        //    for (int i = 0; i < rootregions.Count; i++)
+        //    {
+        //        rootregions[i].IndexOfParent = i;
+        //    }
+        //}
 
 
-        /// <summary>
-        ///     <para>
-        ///         顶级 <see cref="Region" /> 匹配优先级设置，算法内部将按照指定顺序对内部字典进行匹配
-        ///         设置优先级有助于针对性的提升算法性能，如：
-        ///         数据库地址全是“上海市”开头的地址，那么配置上海市优先，可将性能提升 10 ~ 20 倍
-        ///         注意：
-        ///             此方法并不是线程安全的，应该在首次匹配地址之前调用，且地址匹配期间不应再次调用，否则易产生意想不到的结果
-        ///     </para>
-        ///     <code>
-        ///         //将“上海市”标记为匹配的最高优先级，当算法内部索引快速命中 <see cref="IndexQuickMatch(ref string, int, string[])" /> 
-        ///         //没有命中索引时，优先处理的顶级 <see cref="Region" />
-        ///         //若是命中了索引，则以算法命中的为优先，该配置优先级次于算法
-        ///         //参数可针对 <see cref="Region.Name" /> 或 <see cref="Region.ID" /> 进行更多的顺序配置，只需要返回相对顺序即可
-        ///         AddressParser.MakePrioritySort(_p => _p.Name == "上海市" ? 0 : 1);
-        ///     </code>
-        /// </summary>
-        /// <param name="selector"> 对给定的 <see cref="Region" /> 返回一个序号，该序号作为内部顶级区划的相对顺序，默认顺序“0” </param>
-        public static void MakePrioritySort(Func<Region, int> selector)
-        {
-            if (selector != null)
-            {
-                var rootlevel = AddressParser._sortedLevels[0];
-                var roots = RegionsByLevel[rootlevel]
-                            .OrderBy(selector)
-                            .ToList();
 
-                _regionsByLevel[rootlevel] = new ReadOnlyCollection<Region>(roots);
 
-                BuildRootLevelIndex();
-            }
-        }
+
 
 
         /// <summary>
@@ -426,7 +249,7 @@ namespace AddressParsing
         public static List<RegionMatchResult> ParsingAddress(
             string address)
         {
-            ExtensionMethods.RemoveChars(ref address, SplitterChars);
+            UtilMethods.RemoveChars(ref address, SplitterChars);
 
             if (string.IsNullOrEmpty(address)
                 || address.Length < 2)
@@ -459,7 +282,7 @@ namespace AddressParsing
             }
 
             Match(
-                RegionsByLevel[AddressParser._sortedLevels[0]],
+                BasicData.RegionsByLevel[BasicData.SortedLevels[0]],
                 index,
                 childrenindex,
                 ref pathmatchlevel,
@@ -794,12 +617,12 @@ namespace AddressParsing
 
             for (int k = regionindex; k < regionscope.Count; k++)
             {
-                if (regionscope[k].Name== "安徽省")
+                if (regionscope[k].Name == "安徽省")
                 {
 
                 }
                 //  若 PathName 命中是最下级的 Region 直接返回
-                if (pathmatchlevel == _sortedLevels[_sortedLevels.Length - 1])
+                if (pathmatchlevel == BasicData.SortedLevels[BasicData.SortedLevels.Length - 1])
                 {
                     return;
                 }
@@ -948,7 +771,7 @@ namespace AddressParsing
 
                 //  递归匹配当前 Region 的 Children
                 //  若当前 Region 的 Level 非最后一级，启用 IndexQuickMatch 来快速命中下级索引
-                if (current.Level < _sortedLevels[_sortedLevels.Length - 1])
+                if (current.Level < BasicData.SortedLevels[BasicData.SortedLevels.Length - 1])
                 {
                     Match(
                         current.Children,

@@ -1,5 +1,6 @@
 ﻿using AddressParsing;
 using Newtonsoft.Json;
+using NPinyin;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,10 +12,57 @@ namespace Demo
 {
     class Program
     {
+        public static string GetSpellCode(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+
+            return Pinyin.GetInitials(value);
+        }
+
+
+        
+
+
         static void Main(string[] args)
         {
+            TestSpellSearch();
+
+            //TestParser();
+
+            Console.ReadKey();
+        }
+
+        public static void TestSpellSearch()
+        {
+            while (true)
+            {
+                Console.Write("字符：");
+                var spell = Console.ReadLine();
+
+                Stopwatch sw = Stopwatch.StartNew();
+
+                var results = AddressSearcher.SpellSearch(spell);
+
+                sw.Stop();
+
+                foreach (var item in results)
+                {
+                    Console.WriteLine(item.Region);
+                }
+
+                Console.WriteLine(sw.Elapsed);
+                Console.WriteLine();
+            }
+        }
+
+
+        public static void TestParser()
+        {
             //设置一级区划匹配优先级，优先匹配的一级区划，该配置优先级小于算法快速命中的优先级
-            AddressParser.MakePrioritySort(
+            BasicData.MakePrioritySort(
                     _p =>
                     {
                         switch (_p.Name)
@@ -84,7 +132,6 @@ namespace Demo
             //        Console.ReadKey();
             //    }
             //}
-
         }
     }
 }

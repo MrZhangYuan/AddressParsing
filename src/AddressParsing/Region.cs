@@ -35,6 +35,14 @@ namespace AddressParsing
         }
 
         /// <summary>
+        ///     名称拼音
+        /// </summary>
+        public string NameSpell
+        {
+            get;
+        }
+
+        /// <summary>
         ///     行政区划代码
         /// </summary>
         public string AdDivCode
@@ -67,6 +75,14 @@ namespace AddressParsing
         }
 
         /// <summary>
+        ///     和 ShortNames 索引位置对应的拼音
+        /// </summary>
+        public string[] ShortNamesSpell
+        {
+            get;
+        }
+
+        /// <summary>
         ///     上级 Region ID
         /// </summary>
         public string ParentID
@@ -74,24 +90,42 @@ namespace AddressParsing
             get;
         }
 
+        [JsonIgnore]
+        public Region Parent
+        {
+            get;
+            internal set;
+        }
+
+        [JsonIgnore]
+        public ReadOnlyCollection<Region> Children
+        {
+            get;
+            internal set;
+        }
+
         [JsonConstructor]
         internal Region(
             string iD,
             int level,
             string name,
+            string nameSpell,
             string adDivCode,
             string areaCode,
             string zipCode,
             string[] shortNames,
+            string[] shortNamesSpell,
             string parentID)
         {
             this.ID = iD;
             this.Level = level;
             this.Name = name;
+            this.NameSpell = nameSpell;
             this.AdDivCode = adDivCode;
             this.AreaCode = areaCode;
             this.ZipCode = zipCode;
             this.ShortNames = shortNames;
+            this.ShortNamesSpell = shortNamesSpell;
             this.ParentID = parentID;
         }
 
@@ -100,6 +134,30 @@ namespace AddressParsing
         /// </summary>
         [JsonIgnore]
         internal string[] PathNames
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        ///     PathNames 的拼音
+        ///     其数量和索引不与 PathNames 一一对应
+        ///     它是 PathNames 经 <see cref="UtilMethods.CheckFullSpell(IEnumerable{string})"> 算法处理过的
+        /// </summary>
+
+        [JsonIgnore]
+        internal string[] PathFullSpells
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        ///     26 个英文字母 PathFullSpells 包含标记
+        ///     靠右26位标记
+        /// </summary>
+        [JsonIgnore]
+        internal UpperLetter PathLetters
         {
             get;
             set;
@@ -123,20 +181,6 @@ namespace AddressParsing
         {
             get;
             set;
-        }
-
-        [JsonIgnore]
-        public Region Parent
-        {
-            get;
-            internal set;
-        }
-
-        [JsonIgnore]
-        public ReadOnlyCollection<Region> Children
-        {
-            get;
-            internal set;
         }
 
         [JsonIgnore]
@@ -218,6 +262,33 @@ namespace AddressParsing
                 foreach (var shortname in this.ShortNames)
                 {
                     yield return shortname;
+                }
+            }
+        }
+
+        public IEnumerable<string> BuildPathSpells()
+        {
+            if (this.Parent != null)
+            {
+                foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathSpells()))
+                {
+                    yield return item + this.NameSpell;
+
+                    foreach (var shortspell in this.ShortNamesSpell)
+                    {
+                        yield return item + shortspell;
+                    }
+                }
+            }
+
+            if (this.Children != null
+                && this.Children.Count > 0)
+            {
+                yield return this.NameSpell;
+
+                foreach (var shortspell in this.ShortNamesSpell)
+                {
+                    yield return shortspell;
                 }
             }
         }
