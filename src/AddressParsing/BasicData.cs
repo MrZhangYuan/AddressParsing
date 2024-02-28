@@ -63,6 +63,12 @@ namespace AddressParsing
 
         private static string ReadRegionsFile()
         {
+            var curpath = Path.Combine(Directory.GetCurrentDirectory(), "AddressParsingRegions.json");
+            if (File.Exists(curpath))
+            {
+                return File.ReadAllText(curpath);
+            }
+
             using (Stream sm = Assembly.GetExecutingAssembly().GetManifestResourceStream($"{Assembly.GetExecutingAssembly().GetName().Name}.Internal.Regions.json"))
             {
                 if (sm == null)
