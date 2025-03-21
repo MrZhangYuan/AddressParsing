@@ -28,9 +28,9 @@ namespace Demo
 
         static void Main(string[] args)
         {
-            //TestSpellSearch();
+            TestSpellSearch();
 
-            TestParser();
+            //TestParser();
 
             Console.ReadKey();
         }
