@@ -71,42 +71,11 @@ namespace AddressParsing
         }
 #endif
 
-        /// <summary>
-        ///     地址常用分割符，用来首次处理地址时移除
-        /// </summary>
-        private static char[] SplitterChars { get; } = new char[]
-        {
-            '~','!','@','#','$',
-            '%','^','&','(',')',
-            '-','+','_','=',':',
-            ';','\'','"','?','|',
-            '\\','{','}','[',']',
-            '<','>',',','.',' ',
-            '！','￥','…','（','）',
-            '—','【','】','、','：',
-            '；','“','’','《','》',
-            '？','，','　'
-            //'*',
-        };
-
-
-        /// <summary>
-        ///     非三级地区常用后缀和前缀
-        /// </summary>
-        private static string[] RegionInvalidSuffix { get; } = new string[]
-        {
-            "街", "路", "村", "弄", "幢", "号", "道",
-            "大厦", "工业", "产业", "广场", "科技", "公寓", "中心", "小区", "花园", "大道", "农场",
-            "0","1","2","3","4","5","6","7","8","9",
-            "０","１","２","３","４","５","６","７","８","９",
-            "A","B","C","D","E","F","G","H","I","J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
-            "a","b","c","d","e","f","g","h","i","j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ"
-        };
-
 
         static AddressParser()
         {
+            BasicData.Build();
+
             BuildTopLevel2QuickIndex();
 
 #if DEBUG
@@ -165,22 +134,6 @@ namespace AddressParsing
         }
 
 
-        //private static void BuildRootLevelIndex()
-        //{
-        //    //  第一级 Region 的 IndexOfParent 设定为在根集合的索引
-        //    var rootregions = _regionsByLevel[_sortedLevels[0]];
-        //    for (int i = 0; i < rootregions.Count; i++)
-        //    {
-        //        rootregions[i].IndexOfParent = i;
-        //    }
-        //}
-
-
-
-
-
-
-
         /// <summary>
         ///     <para>
         ///         根据匹配结果 <see cref="RegionMatchResult" /> 对指定地址进行裁剪处理
@@ -231,7 +184,7 @@ namespace AddressParsing
         /// <summary>
         ///     <para>
         ///         匹配地址，算法整体分为三个步骤：
-        ///         1：修正，将地址中的一些特殊字符 <see cref="SplitterChars" /> 移除掉，便于内部进行 <see cref="MatchType.PathName" /> 匹配
+        ///         1：修正，将地址中的一些特殊字符 <see cref="UtilMethods.SplitterChars" /> 移除掉，便于内部进行 <see cref="MatchType.PathName" /> 匹配
         ///         2：匹配，从根 <see cref="Region" /> 开始循环和递归匹配，匹配之前会调用 <see cref="IndexQuickMatchTopLevel2(ref string, int, out Region, out int)" /> 进行前2级索引快速命中
         ///         3：规则，若是第2步没有 <see cref="MatchType.PathName" /> 匹配结果并且结果集数量大于1，进行规则处理 <see cref="MergeAndSort(List{MatchRegionItem})" /> 
         ///     </para>
@@ -249,7 +202,7 @@ namespace AddressParsing
         public static List<RegionMatchResult> ParsingAddress(
             string address)
         {
-            UtilMethods.RemoveChars(ref address, SplitterChars);
+            UtilMethods.RemoveChars(ref address);
 
             if (string.IsNullOrEmpty(address)
                 || address.Length < 2)
@@ -702,7 +655,7 @@ namespace AddressParsing
                             //  上海市闸北区西藏南路 - 西藏
                             //  上海市闸北区南京东路 - 南京
                             //  针对这种情况，我们需要特殊处理下：
-                            //  在匹配到的 MatchType.ShortName 的当前索引向前和向后2个字符中,寻找一些特殊的字符后缀 RegionInvalidSuffix
+                            //  在匹配到的 MatchType.ShortName 的当前索引向前和向后2个字符中,寻找一些特殊的字符后缀 UtilMethods.RegionInvalidSuffix
                             //  若是包含这些字符后缀，本次匹配无效
                             if (matchindex >= 0
                                 && IsMatchedNameValid(ref address, matchindex, current.ShortNames[i].Length))
@@ -797,12 +750,12 @@ namespace AddressParsing
 
         /// <summary>
         ///     从给定地址的给定位置开始向前和向后2个字符中
-        ///     匹配是否不包含特殊字符  <see cref="RegionInvalidSuffix" /> 
+        ///     匹配是否不包含特殊字符  <see cref="UtilMethods.RegionInvalidSuffix" /> 
         /// </summary>
         /// <param name="address"> 给定的地址 </param>
         /// <param name="startindex"> 匹配的起始位置 </param>
         /// <param name="matchlength"> 本次匹配到的某个 <see cref="Region.ShortNames" /> 的字符长度 </param>
-        /// <returns> 本次匹配不包含 <see cref="RegionInvalidSuffix" /> 后缀 </returns>
+        /// <returns> 本次匹配不包含 <see cref="UtilMethods.RegionInvalidSuffix" /> 后缀 </returns>
         private static bool IsMatchedNameValid(
             ref string address,
             int startindex,
@@ -823,7 +776,7 @@ namespace AddressParsing
                 {
                     substr = address.Substring(startindex + matchlength, offset);
                 }
-                bool valid = !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
+                bool valid = !UtilMethods.RegionInvalidSuffix.Any(_p => substr.Contains(_p));
 
                 if (!valid)
                 {
@@ -838,7 +791,7 @@ namespace AddressParsing
                 {
                     substr = address.Substring(0, startindex);
                 }
-                return !RegionInvalidSuffix.Any(_p => substr.Contains(_p));
+                return !UtilMethods.RegionInvalidSuffix.Any(_p => substr.Contains(_p));
             }
 
             return true;

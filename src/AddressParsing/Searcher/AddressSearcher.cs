@@ -22,12 +22,15 @@ namespace AddressParsing
 
         static AddressSearcher()
         {
+            BasicData.Build();
+
             BuildSearchIndex();
         }
 
 
         /// <summary>
         ///     对三级区划编排一个二级索引
+        ///     索引键为两个 UpperLetter 逻辑或，索引值域为 PathFullSpells 包含两个字符的三级区划集合
         /// </summary>
         private static void BuildSearchIndex()
         {
@@ -62,7 +65,6 @@ namespace AddressParsing
             };
 
             var maps = new Dictionary<UpperLetter, Dictionary<UpperLetter, HashSet<Region>>>();
-
 
             foreach (var okey in chars)
             {
@@ -143,9 +145,17 @@ namespace AddressParsing
                 letter,
                 results);
 
+            Rules(results);
+
             return results;
         }
 
+
+        /// <summary>
+        ///     索引快速扫描，扫描参数 UpperLetter 包含的索引
+        ///     若输入 AHSDSX（安徽省砀山县）那么参数转 UpperLetter 后变为：A | D | H | S | X
+        ///     扫描 _sortedSearchIndexs 根据 Contains 规则选出第一个大集合，索引值：A | D，集合数量为：77个
+        /// </summary>
         private static Region[] IndexScan(UpperLetter letters)
         {
             for (int i = 0; i < _sortedSearchIndexs.Length; i++)
@@ -161,6 +171,11 @@ namespace AddressParsing
         }
 
 
+        /// <summary>
+        ///     在索引命中的集合中精细化筛选出最终结果
+        ///     扫描集合中每个项的 PathLetters 与 参数 UpperLetter 作比较，因为 PathLetters 是每个区划最全的 UpperLetter ，所以操作符为 Contains
+        ///     若以上规则都成立，则比较当前项的 PathFullSpells 是否 ParttenContains 输入参数 spell
+        /// </summary>
         private static void Search(
             Region[] range,
             ref string spell,
@@ -183,6 +198,15 @@ namespace AddressParsing
                     }
                 }
             }
+        }
+
+
+        /// <summary>
+        ///     规则处理
+        /// </summary>
+        private static void Rules(List<SearchRegionItem> sitems)
+        {
+
         }
     }
 }

@@ -7,7 +7,10 @@ namespace AddressParsing
 {
     internal static class UtilMethods
     {
-        private static char[] _letters = new char[104]
+        /// <summary>
+        ///     字母字符集
+        /// </summary>
+        internal static char[] Letters { get; } = new char[104]
         {
             'A', 'a', 'Ａ', 'ａ',
             'B', 'b', 'Ｂ', 'ｂ',
@@ -37,6 +40,93 @@ namespace AddressParsing
             'Z', 'z', 'Ｚ', 'ｚ'
         };
 
+        /// <summary>
+        ///     地址常用分割符，用来首次处理地址时移除
+        /// </summary>
+        internal static char[] SplitterChars { get; } = new char[]
+        {
+            '~','!','@','#','$',
+            '%','^','&','(',')',
+            '-','+','_','=',':',
+            ';','\'','"','?','|',
+            '\\','{','}','[',']',
+            '<','>',',','.',' ',
+            '！','￥','…','（','）',
+            '—','【','】','、','：',
+            '；','“','’','《','》',
+            '？','，','　'
+            //'*',
+        };
+
+        /// <summary>
+        ///     非三级地区常用后缀和前缀
+        /// </summary>
+        internal static string[] RegionInvalidSuffix { get; } = new string[]
+        {
+            "街", "路", "村", "弄", "幢", "号", "道",
+            "大厦", "工业", "产业", "广场", "科技", "公寓", "中心", "小区", "花园", "大道", "农场",
+            "0","1","2","3","4","5","6","7","8","9",
+            "０","１","２","３","４","５","６","７","８","９",
+            "A","B","C","D","E","F","G","H","I","J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+            "a","b","c","d","e","f","g","h","i","j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
+            "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ"
+        };
+
+
+
+        public static int CheckRegionLevel(int level)
+        {
+            for (int i = 1; i <= 3; i++)
+            {
+                if (level == i)
+                {
+                    return level;
+                }
+            }
+
+            throw new ArgumentException("区划等级错误，可选的值为[1,2,3]，对应[省，市，县]");
+        }
+
+        public static string CheckRegionParentID(int level, string parentid)
+        {
+            if (level > 1
+                && string.IsNullOrEmpty(parentid))
+            {
+                throw new ArgumentException("区划等级为[2,3]，对应区划为[市，县]时，必须包含有效的 parentID");
+            }
+
+            return parentid;
+        }
+
+        public static string ThrowIfNull(string val, string name)
+        {
+            if (string.IsNullOrEmpty(val))
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            return val;
+        }
+
+        public static string DefaultIfNull(string val, string def)
+        {
+            if (string.IsNullOrEmpty(val))
+            {
+                return def;
+            }
+
+            return val;
+        }
+
+        public static T ThrowIfNull<T>(T val, string name) where T : class
+        {
+            if (val == null)
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            return val;
+        }
 
 
         public static List<T> MaxGroup<T>(this List<T> source, Func<T, int> keyselector)
@@ -281,7 +371,7 @@ namespace AddressParsing
 
 
 
-        public static void RemoveChars(ref string sourcestr, char[] chars)
+        public static void RemoveChars(ref string sourcestr)
         {
             if (!string.IsNullOrEmpty(sourcestr))
             {
@@ -290,7 +380,7 @@ namespace AddressParsing
                 int j = 0;
                 for (int i = 0; i < sourcestr.Length; i++)
                 {
-                    if (!chars.Contains(sourcestr[i]))
+                    if (!SplitterChars.Contains(sourcestr[i]))
                     {
                         if (newchars == null)
                         {
@@ -382,15 +472,15 @@ namespace AddressParsing
 
                 for (int i = 0; i < sourcestr.Length; i++)
                 {
-                    for (int j = 0; j < _letters.Length; j = j + 4)
+                    for (int j = 0; j < Letters.Length; j = j + 4)
                     {
                         var current = sourcestr[i];
-                        if (current == _letters[j]
-                            || current == _letters[j + 1]
-                            || current == _letters[j + 2]
-                            || current == _letters[j + 3])
+                        if (current == Letters[j]
+                            || current == Letters[j + 1]
+                            || current == Letters[j + 2]
+                            || current == Letters[j + 3])
                         {
-                            newchars[k] = _letters[j];
+                            newchars[k] = Letters[j];
                             k++;
                         }
                     }

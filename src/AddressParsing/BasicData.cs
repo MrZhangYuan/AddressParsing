@@ -11,14 +11,35 @@ namespace AddressParsing
 {
     public static class BasicData
     {
-        private static List<Region> _sourceList = null;
-        private static int[] _sortedLevels = null;
-        private static Dictionary<int, ReadOnlyCollection<Region>> _regionsByLevel = null;
+        private static readonly object _initLocker = new object();
 
+        /// <summary>
+        ///     正序排列的区划等级，通常为固定值 [1,2,3]
+        /// </summary>
         internal static int[] SortedLevels
         {
-            get => _sortedLevels;
+            get;
+            private set;
         }
+
+        /// <summary>
+        ///     提供自定义数据源的方案，请在首次调用前赋值
+        /// </summary>
+        public static Func<List<Region>> RegionsCreater
+        {
+            get;
+            set;
+        }
+
+        /// <summary>
+        ///     在建立缓存之前做一些需要的变动，如：优先级排序、行政区划代码设置、邮编设置
+        /// </summary>
+        public static Action<Region> OnBuilding
+        {
+            get;
+            set;
+        }
+
 
         /// <summary>
         ///     所有的区划
@@ -40,25 +61,62 @@ namespace AddressParsing
         }
 
 
-
-        static BasicData()
+        internal static void Build()
         {
-            var regions = ReadRegionsFile();
-            _sourceList = JsonConvert.DeserializeObject<List<Region>>(regions);
-            Regions = new ReadOnlyCollection<Region>(_sourceList);
+            if (Regions == null)
+            {
+                lock (_initLocker)
+                {
+                    if (Regions == null)
+                    {
+                        if (RegionsCreater != null)
+                        {
+                            var regions = RegionsCreater();
+                            if (regions != null)
+                            {
+                                Regions = new ReadOnlyCollection<Region>(regions);
+                            }
+                        }
 
-            _regionsByLevel = Regions.GroupBy(_p => _p.Level)
-                                    .ToDictionary(
-                                        _p => _p.Key,
-                                        _p => new ReadOnlyCollection<Region>(_p.ToList())
-                                    );
-            RegionsByLevel = new ReadOnlyDictionary<int, ReadOnlyCollection<Region>>(_regionsByLevel);
+                        if (Regions == null)
+                        {
+                            var region_txt = ReadRegionsFile();
+                            var regions = JsonConvert.DeserializeObject<List<Region>>(region_txt);
+                            Regions = new ReadOnlyCollection<Region>(regions);
+                        }
 
-            _sortedLevels = BasicData.RegionsByLevel.Keys.OrderBy(_p => _p).ToArray();
+                        if (OnBuilding != null)
+                        {
+                            for (int i = 0; i < Regions.Count; i++)
+                            {
+                                if (Regions[i].Level == 1)
+                                {
+                                    OnBuilding(Regions[i]);
+                                }
+                            }
+                        }
 
-            BuildRootLevelIndex();
-            BuildRelation();
-            BuildPathInfo();
+                        var reg_level = Regions.GroupBy(_p => _p.Level)
+                                                .ToDictionary(
+                                                    _p => _p.Key,
+                                                    _p => new ReadOnlyCollection<Region>(_p.ToList())
+                                                );
+
+                        SortedLevels = reg_level.Keys.OrderBy(_p => _p).ToArray();
+
+                        if (SortedLevels.Length != 3)
+                        {
+                            throw new ArgumentException("自定义 RegionsCreater 返回数据无效，应包含三级区划 Level");
+                        }
+
+                        RegionsByLevel = MakePrioritySort(reg_level);
+
+                        BuildRootLevelIndex();
+                        BuildRelation();
+                        BuildPathInfo();
+                    }
+                }
+            }
         }
 
         private static string ReadRegionsFile()
@@ -84,7 +142,7 @@ namespace AddressParsing
         private static void BuildRootLevelIndex()
         {
             //  第一级 Region 的 IndexOfParent 设定为在根集合的索引
-            var rootregions = _regionsByLevel[_sortedLevels[0]];
+            var rootregions = RegionsByLevel[SortedLevels[0]];
             for (int i = 0; i < rootregions.Count; i++)
             {
                 rootregions[i].IndexOfParent = i;
@@ -213,19 +271,15 @@ namespace AddressParsing
         ///     </code>
         /// </summary>
         /// <param name="selector"> 对给定的 <see cref="Region" /> 返回一个序号，该序号作为内部顶级区划的相对顺序，默认顺序“0” </param>
-        public static void MakePrioritySort(Func<Region, int> selector)
+        private static ReadOnlyDictionary<int, ReadOnlyCollection<Region>> MakePrioritySort(Dictionary<int, ReadOnlyCollection<Region>> reg_level)
         {
-            if (selector != null)
-            {
-                var rootlevel = _sortedLevels[0];
-                var roots = RegionsByLevel[rootlevel]
-                            .OrderBy(selector)
-                            .ToList();
+            var rootlevel = SortedLevels[0];
+            var roots = reg_level[rootlevel]
+                        .OrderBy(_p => _p.PrioritySort)
+                        .ToList();
+            reg_level[rootlevel] = new ReadOnlyCollection<Region>(roots);
 
-                _regionsByLevel[rootlevel] = new ReadOnlyCollection<Region>(roots);
-
-                BuildRootLevelIndex();
-            }
+            return new ReadOnlyDictionary<int, ReadOnlyCollection<Region>>(reg_level);
         }
     }
 }

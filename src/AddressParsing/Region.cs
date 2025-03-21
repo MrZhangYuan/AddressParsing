@@ -48,6 +48,7 @@ namespace AddressParsing
         public string AdDivCode
         {
             get;
+            set;
         }
 
         /// <summary>
@@ -56,6 +57,7 @@ namespace AddressParsing
         public string AreaCode
         {
             get;
+            set;
         }
 
         /// <summary>
@@ -64,6 +66,7 @@ namespace AddressParsing
         public string ZipCode
         {
             get;
+            set;
         }
 
         /// <summary>
@@ -90,6 +93,16 @@ namespace AddressParsing
             get;
         }
 
+        /// <summary>
+        ///     一级区划匹配的优先级
+        ///     如某个程序通常应用在安徽省，那么将安徽省设置为 0，其他省份 > 0，则有助于提高性能
+        /// </summary>
+        public int PrioritySort
+        {
+            get;
+            set;
+        }
+
         [JsonIgnore]
         public Region Parent
         {
@@ -105,7 +118,7 @@ namespace AddressParsing
         }
 
         [JsonConstructor]
-        internal Region(
+        public Region(
             string iD,
             int level,
             string name,
@@ -115,18 +128,20 @@ namespace AddressParsing
             string zipCode,
             string[] shortNames,
             string[] shortNamesSpell,
-            string parentID)
+            string parentID,
+            int? psort)
         {
-            this.ID = iD;
-            this.Level = level;
-            this.Name = name;
-            this.NameSpell = nameSpell;
+            this.ID = UtilMethods.ThrowIfNull(iD, nameof(iD));
+            this.Level = UtilMethods.CheckRegionLevel(level);
+            this.Name = UtilMethods.ThrowIfNull(name, nameof(name));
+            this.NameSpell = UtilMethods.ThrowIfNull(nameSpell, nameof(nameSpell));
             this.AdDivCode = adDivCode;
             this.AreaCode = areaCode;
             this.ZipCode = zipCode;
-            this.ShortNames = shortNames;
-            this.ShortNamesSpell = shortNamesSpell;
-            this.ParentID = parentID;
+            this.ShortNames = UtilMethods.ThrowIfNull<string[]>(shortNames, nameof(ShortNames));
+            this.ShortNamesSpell = UtilMethods.ThrowIfNull<string[]>(shortNamesSpell, nameof(shortNamesSpell));
+            this.ParentID = UtilMethods.CheckRegionParentID(this.Level, parentID);
+            this.PrioritySort = psort.GetValueOrDefault(0);
         }
 
         /// <summary>

@@ -23,14 +23,36 @@ namespace Demo
         }
 
 
-        
+
 
 
         static void Main(string[] args)
         {
-            TestSpellSearch();
+            //自定义 Regions 数据源
+            //BasicData.RegionsCreater = () => new List<Region>();
 
-            //TestParser();
+            BasicData.OnBuilding = _p =>
+            {
+                //设置一级区划匹配优先级，优先匹配的一级区划，该配置优先级小于算法快速命中的优先级
+                switch (_p.Name)
+                {
+                    case "上海市":
+                        _p.PrioritySort = 0;
+                        break;
+
+                    case "江苏省":
+                        _p.PrioritySort = 1;
+                        break;
+
+                        //......
+                }
+                _p.PrioritySort = 99;
+            };
+
+
+            //TestSpellSearch();
+
+            TestParser();
 
             Console.ReadKey();
         }
@@ -61,26 +83,6 @@ namespace Demo
 
         public static void TestParser()
         {
-            //设置一级区划匹配优先级，优先匹配的一级区划，该配置优先级小于算法快速命中的优先级
-            BasicData.MakePrioritySort(
-                    _p =>
-                    {
-                        switch (_p.Name)
-                        {
-                            case "上海市":
-                                return 0;
-
-                            case "江苏省":
-                                return 1;
-
-                                //......
-                        }
-
-                        return 99;
-                    }
-                );
-
-
             while (true)
             {
                 Console.Write("地址：");
@@ -103,35 +105,6 @@ namespace Demo
 
                 Console.WriteLine();
             }
-
-
-
-
-            //{
-            //    var linest = File.ReadAllLines("AddressTest3.txt");
-
-            //    int process = linest.Length;
-
-            //    string[] lines = new string[process];
-            //    for (int i = 0; i < lines.Length; i++)
-            //    {
-            //        lines[i] = linest[i % linest.Length];
-            //    }
-
-            //    List<RegionMatchResult>[] results = new List<RegionMatchResult>[lines.Length];
-
-            //    while (true)
-            //    {
-            //        Stopwatch sw = Stopwatch.StartNew();
-            //        for (int i = 0; i < lines.Length; i++)
-            //        {
-            //            results[i] = AddressParser.ParsingAddress(lines[i]);
-            //        }
-            //        sw.Stop();
-            //        Console.WriteLine(sw.Elapsed);
-            //        Console.ReadKey();
-            //    }
-            //}
         }
     }
 }
