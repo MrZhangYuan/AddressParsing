@@ -13,6 +13,8 @@
         /// <summary>
         /// 简称命中
         /// </summary>
-        ShortName = 2
+        ShortName = 2,
+
+        None = 3
     }
 }

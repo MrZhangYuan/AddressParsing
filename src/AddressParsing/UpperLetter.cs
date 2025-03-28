@@ -31,6 +31,7 @@ namespace AddressParsing
         W = 0x00400000,
         X = 0x00800000,
         Y = 0x01000000,
-        Z = 0x02000000
+        Z = 0x02000000,
+        //Star = 0x04000000
     }
 }

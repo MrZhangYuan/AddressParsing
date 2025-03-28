@@ -22,7 +22,7 @@ namespace AddressParsing
 
         static AddressSearcher()
         {
-            BasicData.Build();
+            RegionData.Build();
 
             BuildSearchIndex();
         }
@@ -75,8 +75,9 @@ namespace AddressParsing
                     var set = new HashSet<Region>();
                     var ch = ikey.ToString()[0];
 
-                    foreach (var region in BasicData.RegionsByLevel[BasicData.SortedLevels.Last()])
+                    foreach (var region in RegionData.RegionsByLevel[RegionData.SortedLevels.Last()])
                     {
+                        /*
                         if (okey == ikey
                             && region.PathFullSpells.Any(_p => _p.Count(_p1 => _p1 == ch) >= 2))
                         {
@@ -89,6 +90,7 @@ namespace AddressParsing
                                 set.Add(region);
                             }
                         }
+                        */
                     }
 
                     dict[ikey] = set;
@@ -186,6 +188,8 @@ namespace AddressParsing
             {
                 var item = range[j];
 
+
+                /*
                 if (item.PathLetters.Contains(letter))
                 {
                     for (int i = 0; i < item.PathFullSpells.Length; i++)
@@ -197,6 +201,8 @@ namespace AddressParsing
                         }
                     }
                 }
+
+                */
             }
         }
 

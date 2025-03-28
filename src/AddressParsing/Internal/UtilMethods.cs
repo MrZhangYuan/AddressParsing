@@ -5,6 +5,24 @@ using System.Runtime.CompilerServices;
 
 namespace AddressParsing
 {
+    internal static class Constances
+    {
+        const string Nation = "黎族|傣族|傈僳族|佤族|纳西族|景颇族|基诺族|土族|汉族|水族|羌族|京族|回族|藏族|维吾尔族|布依族|塔塔尔族|独龙族|高山族|鄂伦春族|赫哲族|门巴族|珞巴族|仫佬族|布朗族|撒拉族|毛南族|仡佬族|锡伯族|阿昌族|普米族|塔吉克族|怒族|乌孜别克族|俄罗斯族|鄂温克族|德昂族|保安族|裕固族|蒙古族|苗族|彝族|壮族|朝鲜族|满族|侗族|瑶族|白族|土家族|哈尼族|哈萨克族|达斡尔族|畲族|柯尔克孜族|拉祜族|东乡族";
+
+
+        const string Suffix = "特别行政区|自治区|自治县|自治州|沁旗|联合旗|地区|自治旗|林区|特区|市辖区|民族乡|苏木|民族苏木|新区|省|市|县|镇|街道|蒙古自治州" +
+            "|盟|旗" +
+            "";
+
+
+        const string Lv1Suffix = "";
+        const string Lv2Suffix = "";
+        const string Lv3Suffix = "";
+        const string Lv4Suffix = "";
+        const string AfterLv4Suffix = "";
+    }
+
+
     internal static class UtilMethods
     {
         /// <summary>
@@ -54,9 +72,11 @@ namespace AddressParsing
             '！','￥','…','（','）',
             '—','【','】','、','：',
             '；','“','’','《','》',
-            '？','，','　'
-            //'*',
+            '？','，','　',' ',
+            '*','\n','\r','\t','\0'
         };
+
+        internal static string SplitterCharsString { get; } = "~!@#$%^&()-+_=:;'\"?|\\{}[]<>,. ！￥…（）—【】、：；“’《》？，　 *\n\r\t\0";
 
         /// <summary>
         ///     非三级地区常用后缀和前缀
@@ -68,6 +88,7 @@ namespace AddressParsing
             "0","1","2","3","4","5","6","7","8","9",
             "０","１","２","３","４","５","６","７","８","９",
             "A","B","C","D","E","F","G","H","I","J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+            "Ａ","Ｂ","Ｃ","Ｄ","Ｅ","Ｆ","Ｇ","Ｈ","Ｉ","Ｊ","Ｋ","Ｌ","Ｍ","Ｎ","Ｏ","Ｐ","Ｑ","Ｒ","Ｓ","Ｔ","Ｕ","Ｖ","Ｗ","Ｘ","Ｙ","Ｚ",
             "a","b","c","d","e","f","g","h","i","j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
             "ａ","ｂ","ｃ","ｄ","ｅ","ｆ","ｇ","ｈ","ｉ","ｊ", "ｋ", "ｌ", "ｍ", "ｎ", "ｏ", "ｐ", "ｑ", "ｒ", "ｓ", "ｔ", "ｕ", "ｖ", "ｗ", "ｘ", "ｙ", "ｚ"
         };
@@ -76,7 +97,7 @@ namespace AddressParsing
 
         public static int CheckRegionLevel(int level)
         {
-            for (int i = 1; i <= 3; i++)
+            for (int i = 1; i <= 4; i++)
             {
                 if (level == i)
                 {
@@ -84,7 +105,7 @@ namespace AddressParsing
                 }
             }
 
-            throw new ArgumentException("区划等级错误，可选的值为[1,2,3]，对应[省，市，县]");
+            throw new ArgumentException("区划等级错误，可选的值为[1,2,3,4......]，对应[省，市，县，镇/乡......]");
         }
 
         public static string CheckRegionParentID(int level, string parentid)
@@ -92,7 +113,7 @@ namespace AddressParsing
             if (level > 1
                 && string.IsNullOrEmpty(parentid))
             {
-                throw new ArgumentException("区划等级为[2,3]，对应区划为[市，县]时，必须包含有效的 parentID");
+                throw new ArgumentException("区划等级 > 1 时，必须包含有效的 parentID");
             }
 
             return parentid;
@@ -110,7 +131,8 @@ namespace AddressParsing
 
         public static string DefaultIfNull(string val, string def)
         {
-            if (string.IsNullOrEmpty(val))
+            if (string.IsNullOrEmpty(val)
+                || string.IsNullOrWhiteSpace(val))
             {
                 return def;
             }
@@ -371,25 +393,35 @@ namespace AddressParsing
 
 
 
-        public static void RemoveChars(ref string sourcestr)
+        public static void RemoveChars(ref string sourcestr, int maxlength)
         {
             if (!string.IsNullOrEmpty(sourcestr))
             {
-                char[] newchars = null;
+                char[] newchars = new char[sourcestr.Length];
 
+                maxlength = Math.Max(maxlength, 0);
                 int j = 0;
+
                 for (int i = 0; i < sourcestr.Length; i++)
                 {
-                    if (!SplitterChars.Contains(sourcestr[i]))
+                    if (j == maxlength)
                     {
-                        if (newchars == null)
-                        {
-                            newchars = new char[sourcestr.Length];
-                        }
+                        break;
+                    }
 
-                        newchars[j] = sourcestr[i];
+                    var ch = sourcestr[i];
+
+                    if (SplitterCharsString.IndexOf(ch) < 0)
+                    {
+                        newchars[j] = ch;
                         j++;
                     }
+
+                    //if (!SplitterChars.Contains(sourcestr[i]))
+                    //{
+                    //    newchars[j] = sourcestr[i];
+                    //    j++;
+                    //}
                 }
 
                 if (j > 0)
@@ -404,6 +436,28 @@ namespace AddressParsing
         public static bool Contains(this UpperLetter letter1, UpperLetter letter2)
         {
             return (letter1 & letter2) == letter2;
+        }
+
+
+
+        /// <summary>
+        ///     对字符串按指定长度进行子串返回
+        ///     对于一个给定的字符串：ABCDEFG
+        ///     若：length = 1，返回：A   B   C   D   E   F   G
+        ///     若：length = 2，返回：AB  BC  CD  DE  EF  FG
+        ///     若：length = 3，返回：ABC BCD CDE DEF EFG
+        /// </summary>
+        public static IEnumerable<SubItem> SubItems(string strparam, int length)
+        {
+            if (strparam.Length >= length)
+            {
+                int end = strparam.Length - length;
+
+                for (int i = 0; i <= end; i++)
+                {
+                    yield return new SubItem(i, strparam.Substring(i, length));
+                }
+            }
         }
 
 
@@ -455,8 +509,10 @@ namespace AddressParsing
             else if (ch == 'X') letter |= UpperLetter.X;
             else if (ch == 'Y') letter |= UpperLetter.Y;
             else if (ch == 'Z') letter |= UpperLetter.Z;
-            else
-                throw new NotSupportedException();
+
+            //else if (ch == '*') letter |= UpperLetter.None;
+            //else
+            //    throw new NotSupportedException();
 
             return letter;
         }

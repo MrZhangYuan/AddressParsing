@@ -1,7 +1,9 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 
 namespace AddressParsing
 {
@@ -11,7 +13,7 @@ namespace AddressParsing
     public class Region
     {
         /// <summary>
-        ///     内部ID
+        ///     ID
         /// </summary>
         public string ID
         {
@@ -19,20 +21,21 @@ namespace AddressParsing
         }
 
         /// <summary>
-        ///     等级
+        ///     上级 Region ID
         /// </summary>
-        public int Level
+        public string ParentID
         {
             get;
         }
 
         /// <summary>
-        ///     名称
+        ///     标准全称，如：安徽省、昆明市、徐州市、砀山县、赵屯镇等
         /// </summary>
         public string Name
         {
             get;
         }
+
 
         /// <summary>
         ///     名称拼音
@@ -41,6 +44,63 @@ namespace AddressParsing
         {
             get;
         }
+
+
+        /// <summary>
+        ///     等级
+        ///     省   市   区   县
+        ///     1    2    3   4
+        /// </summary>
+        public int Level
+        {
+            get;
+        }
+
+
+        /// <summary>
+        ///     简称
+        /// </summary>
+        public ReadOnlyCollection<string> ShortNames
+        {
+            get;
+            internal set;
+        }
+
+
+        /// <summary>
+        ///     和 ShortNames 索引位置对应的拼音
+        /// </summary>
+        public ReadOnlyCollection<string> ShortNamesSpell
+        {
+            get;
+            internal set;
+        }
+
+        public Region(string id,
+            string parentid,
+            string name,
+            string namespell,
+            int level,
+            IEnumerable<string> shortnames,
+            IEnumerable<string> shortnamesspell)
+        {
+            this.ID = UtilMethods.ThrowIfNull(id, nameof(id));
+            this.ParentID = UtilMethods.ThrowIfNull(parentid, nameof(parentid));
+            this.Name = UtilMethods.ThrowIfNull(name, nameof(name));
+            this.NameSpell = UtilMethods.ThrowIfNull(namespell, nameof(namespell));
+            this.Level = level;
+
+            if (shortnames != null)
+            {
+                this.ShortNames = new ReadOnlyCollection<string>(shortnames.Where(_p => !string.IsNullOrEmpty(_p)).Distinct().ToList());
+            }
+
+            if (shortnamesspell != null)
+            {
+                this.ShortNamesSpell = new ReadOnlyCollection<string>(shortnamesspell.Where(_p => !string.IsNullOrEmpty(_p)).Distinct().ToList());
+            }
+        }
+
 
         /// <summary>
         ///     行政区划代码
@@ -68,167 +128,100 @@ namespace AddressParsing
             get;
             set;
         }
+    }
 
-        /// <summary>
-        ///     按照识别度（如：字符串长度）倒序排列的简称
-        /// </summary>
-        internal string[] ShortNames
+
+    /// <summary>
+    ///     区划包装器
+    /// </summary>
+    internal class RegionWrap
+    {
+        private static long _unionKeySeeds = 0;
+        //区划总共有几级
+        public static int MaxPathDeep = 0;
+
+        //内部唯一ID，通过这个字段进行比较
+        public long UnionKey
         {
             get;
         }
 
-        /// <summary>
-        ///     和 ShortNames 索引位置对应的拼音
-        /// </summary>
-        public string[] ShortNamesSpell
-        {
-            get;
-        }
+        public Region Region { get; }
 
-        /// <summary>
-        ///     上级 Region ID
-        /// </summary>
-        public string ParentID
-        {
-            get;
-        }
-
-        /// <summary>
-        ///     一级区划匹配的优先级
-        ///     如某个程序通常应用在安徽省，那么将安徽省设置为 0，其他省份 > 0，则有助于提高性能
-        /// </summary>
-        public int PrioritySort
-        {
-            get;
-            set;
-        }
-
-        [JsonIgnore]
-        public Region Parent
+        public RegionWrap Parent
         {
             get;
             internal set;
         }
 
-        [JsonIgnore]
-        public ReadOnlyCollection<Region> Children
+        public RegionWrap[] Children
         {
             get;
             internal set;
         }
 
-        [JsonConstructor]
-        public Region(
-            string iD,
-            int level,
-            string name,
-            string nameSpell,
-            string adDivCode,
-            string areaCode,
-            string zipCode,
-            string[] shortNames,
-            string[] shortNamesSpell,
-            string parentID,
-            int? psort)
-        {
-            this.ID = UtilMethods.ThrowIfNull(iD, nameof(iD));
-            this.Level = UtilMethods.CheckRegionLevel(level);
-            this.Name = UtilMethods.ThrowIfNull(name, nameof(name));
-            this.NameSpell = UtilMethods.ThrowIfNull(nameSpell, nameof(nameSpell));
-            this.AdDivCode = adDivCode;
-            this.AreaCode = areaCode;
-            this.ZipCode = zipCode;
-            this.ShortNames = UtilMethods.ThrowIfNull<string[]>(shortNames, nameof(ShortNames));
-            this.ShortNamesSpell = UtilMethods.ThrowIfNull<string[]>(shortNamesSpell, nameof(shortNamesSpell));
-            this.ParentID = UtilMethods.CheckRegionParentID(this.Level, parentID);
-            this.PrioritySort = psort.GetValueOrDefault(0);
-        }
-
-        /// <summary>
-        ///     全称，如 上海市闵行区、上海闵行区、上海市闵行、上海闵行
-        /// </summary>
-        [JsonIgnore]
-        internal string[] PathNames
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        ///     PathNames 的拼音
-        ///     其数量和索引不与 PathNames 一一对应
-        ///     它是 PathNames 经 <see cref="UtilMethods.CheckFullSpell(IEnumerable{string})"> 算法处理过的
-        /// </summary>
-
-        [JsonIgnore]
-        internal string[] PathFullSpells
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        ///     26 个英文字母 PathFullSpells 包含标记
-        ///     靠右26位标记
-        /// </summary>
-        [JsonIgnore]
-        internal UpperLetter PathLetters
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        ///     PathNames 的匹配跳跃表
-        /// </summary>
-        [JsonIgnore]
-        internal int[] PathNameSkip
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        ///     ShortName 的跳跃表
-        /// </summary>
-        [JsonIgnore]
-        internal bool[] ShortNameSkip
-        {
-            get;
-            set;
-        }
-
-        [JsonIgnore]
         internal int IndexOfParent
         {
             get;
             set;
         }
 
-        [JsonIgnore]
-        internal string[] ChildrenShortestNames
+
+        /// <summary>
+        ///     从起点至当前节点的所有 ID 使用 -> 拼接
+        /// </summary>
+        public string PathId
+        {
+            get;
+            private set;
+        }
+
+        //internal string[] PathNames
+        //{
+        //    get;
+        //    set;
+        //}
+
+        /// <summary>
+        ///     PathNames 的拼音
+        ///     其数量和索引不与 PathNames 一一对应
+        ///     它是 PathNames 经 <see cref="UtilMethods.CheckFullSpell(IEnumerable{string})"> 算法处理过的
+        /// </summary>
+        internal string[] PathFullSpells
         {
             get;
             set;
         }
 
-        public string GetFullPathText()
+        internal UpperLetter PathLetters
         {
-            var pathtext = this.Parent == null ? "" : this.Parent.GetFullPathText();
-
-            if (!string.IsNullOrEmpty(pathtext))
-            {
-                pathtext = $"{pathtext} - {this.Name}";
-            }
-            else
-            {
-                pathtext = this.Name;
-            }
-
-            return pathtext;
+            get;
+            private set;
         }
 
-        public IEnumerable<Region> GetPath()
+        /// <summary>
+        ///     实际路径深度：
+        ///     省：1
+        ///     市：2
+        ///     县：3
+        ///     ......
+        /// </summary>
+        internal int PathDeep
+        {
+            get;
+            private set;
+        }
+
+
+
+
+        public RegionWrap(Region region)
+        {
+            this.Region = region ?? throw new ArgumentNullException(nameof(region));
+            this.UnionKey = Interlocked.Increment(ref _unionKeySeeds);
+        }
+
+        public IEnumerable<RegionWrap> GetPath()
         {
             if (this.Parent != null)
             {
@@ -241,122 +234,177 @@ namespace AddressParsing
             yield return this;
         }
 
-        public IEnumerable<Region> GetPathDesc()
-        {
-            yield return this;
+        //public IEnumerable<string> BuildPathNames()
+        //{
+        //    if (this.Parent != null)
+        //    {
+        //        foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathNames()))
+        //        {
+        //            yield return item + this.Region.Name;
 
+        //            foreach (var shortname in this.Region.ShortNames)
+        //            {
+        //                yield return item + shortname;
+        //            }
+        //        }
+        //    }
+
+        //    if (this.Children != null
+        //        && this.Children.Length > 0)
+        //    {
+        //        yield return this.Region.Name;
+
+        //        foreach (var shortname in this.Region.ShortNames)
+        //        {
+        //            yield return shortname;
+        //        }
+        //    }
+        //}
+
+        //public IEnumerable<string> BuildPathSpells()
+        //{
+        //    if (this.Parent != null)
+        //    {
+        //        foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathSpells()))
+        //        {
+        //            yield return item + this.Region.NameSpell;
+
+        //            foreach (var shortspell in this.Region.ShortNamesSpell)
+        //            {
+        //                yield return item + shortspell;
+        //            }
+        //        }
+        //    }
+
+        //    if (this.Children != null
+        //        && this.Children.Length > 0)
+        //    {
+        //        yield return this.Region.NameSpell;
+
+        //        foreach (var shortspell in this.Region.ShortNamesSpell)
+        //        {
+        //            yield return shortspell;
+        //        }
+        //    }
+        //}
+
+
+
+
+
+        public IEnumerable<char> BuildPathLetters()
+        {
             if (this.Parent != null)
             {
-                foreach (var item in this.Parent.GetPathDesc())
+                foreach (var item in this.Parent.BuildPathLetters())
                 {
                     yield return item;
                 }
             }
-        }
 
-        public IEnumerable<string> BuildPathNames()
-        {
-            if (this.Parent != null)
+            for (int i = 0; i < this.Region.NameSpell.Length; i++)
             {
-                foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathNames()))
-                {
-                    yield return item + this.Name;
-
-                    foreach (var shortname in this.ShortNames)
-                    {
-                        yield return item + shortname;
-                    }
-                }
-            }
-
-            if (this.Children != null
-                && this.Children.Count > 0)
-            {
-                yield return this.Name;
-
-                foreach (var shortname in this.ShortNames)
-                {
-                    yield return shortname;
-                }
+                yield return this.Region.NameSpell[i];
             }
         }
 
-        public IEnumerable<string> BuildPathSpells()
-        {
-            if (this.Parent != null)
-            {
-                foreach (var item in this.Parent.GetPath().SelectMany(_p => _p.BuildPathSpells()))
-                {
-                    yield return item + this.NameSpell;
 
-                    foreach (var shortspell in this.ShortNamesSpell)
-                    {
-                        yield return item + shortspell;
-                    }
-                }
+        public void BuildShortNames()
+        {
+            if (this.Region.ShortNames == null
+                || this.Region.ShortNames.Count == 0)
+            {
+
             }
 
-            if (this.Children != null
-                && this.Children.Count > 0)
+            if (this.Region.ShortNamesSpell == null
+                || this.Region.ShortNamesSpell.Count == 0)
             {
-                yield return this.NameSpell;
 
-                foreach (var shortspell in this.ShortNamesSpell)
-                {
-                    yield return shortspell;
-                }
             }
         }
 
-        public Region GetTopParent()
+
+        public void BuildPathInfo()
         {
+            var path = new string(this.BuildPathLetters().Distinct().ToArray()).ToUpper();
+
+            this.PathLetters = !string.IsNullOrEmpty(path) ? UtilMethods.ConvertUpperLetters(path) : UpperLetter.None;
+
+            this.PathId = string.Join("->", this.GetPath().Select(_p => _p.UnionKey.ToString().PadLeft(8, '0')));
+
+            var deep = 1;
             var parent = this.Parent;
-            if (parent == null)
+            while (parent != null)
             {
-                return this;
-            }
-
-            while (parent.Parent != null)
-            {
+                deep++;
                 parent = parent.Parent;
             }
+            this.PathDeep = deep;
 
-            return parent;
+            RegionWrap.MaxPathDeep = Math.Max(RegionWrap.MaxPathDeep, this.PathDeep);
         }
 
-        public bool PathContains(Region region)
+
+        public bool Contains(RegionWrap obj)
         {
-            if (region == null)
+            if (obj != null
+                && this.PathDeep >= obj.PathDeep)
             {
-                return false;
-            }
-
-            bool results = false;
-
-            var selfpath = this.GetPath()?.ToArray();
-            var targetpath = region.GetPath()?.ToArray();
-
-            if (selfpath != null
-               && targetpath != null
-               && selfpath.Length >= targetpath.Length
-               && targetpath.Length > 0)
-            {
-                var temp = true;
-
-                for (int i = 0; i < targetpath.Length; i++)
+                if (RegionWrapComparer.Instance.Equals(this, obj))
                 {
-                    temp = temp && (selfpath[i] == targetpath[i]);
+                    return true;
                 }
 
-                results = temp;
+                if (this.PathDeep == obj.PathDeep)
+                {
+                    return false;
+                }
+
+                var dep_range = this.PathDeep - obj.PathDeep;
+                var cur = this;
+                for (int i = 0; i < dep_range; i++)
+                {
+                    cur = cur.Parent;
+                }
+
+                return RegionWrapComparer.Instance.Equals(cur, obj);
             }
 
-            return results;
+            return false;
         }
+
+
+        public PathRelation PathRelationOf(RegionWrap wrap)
+        {
+            if (this.Contains(wrap))
+            {
+                if (RegionWrapComparer.Instance.Equals(this, wrap))
+                {
+                    return PathRelation.Equal;
+                }
+                return PathRelation.Contains;
+            }
+            else if (wrap.Contains(this))
+            {
+                return PathRelation.Included;
+            }
+
+            return PathRelation.None;
+        }
+
 
         public override string ToString()
         {
-            return this.GetFullPathText();
+            return $"{this.Region.Name}";
         }
+
+        public string ToPathString()
+        {
+            return string.Join(" - ", this.GetPath().Select(_p => _p.Region.Name));
+        }
+
+
     }
+
 }

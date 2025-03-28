@@ -18,11 +18,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Internal\Regions4.json" />
     <None Remove="Regions.json" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="Internal\Regions.json" />
+    <EmbeddedResource Include="Internal\Regions4.json" />
   </ItemGroup>
 
   <ItemGroup>
