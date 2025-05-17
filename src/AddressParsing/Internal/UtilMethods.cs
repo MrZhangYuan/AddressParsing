@@ -455,8 +455,8 @@ namespace AddressParsing
             else if (ch == 'X') letter |= UpperLetter.X;
             else if (ch == 'Y') letter |= UpperLetter.Y;
             else if (ch == 'Z') letter |= UpperLetter.Z;
-            else
-                throw new NotSupportedException();
+            //else
+            //    throw new NotSupportedException();
 
             return letter;
         }
